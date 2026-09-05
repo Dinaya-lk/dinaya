@@ -36,6 +36,7 @@ export type BookingRow = {
 };
 
 const TABS = [
+  { key: "today", label: "Today" },
   { key: "upcoming", label: "Upcoming" },
   { key: "past", label: "Past" },
   { key: "cancelled", label: "Cancelled" },
@@ -108,7 +109,7 @@ function BookingActions({
   compact?: boolean;
 }) {
   const actions = ACTIONS[row.status] ?? [];
-  const visibleActions = compact ? actions.slice(0, 1) : actions;
+  const visibleActions = compact ? actions.slice(0, 2) : actions;
   const isUpdating = updating === row.id;
   const actionClass = "min-h-11";
 
@@ -155,7 +156,7 @@ function BookingActions({
 
 export function BookingsClient({ api }: { api: BookingsApi }) {
   const { showToast } = useDashboardToast();
-  const [tab, setTab] = useState<BookingsTab>("upcoming");
+  const [tab, setTab] = useState<BookingsTab>("today");
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);

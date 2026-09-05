@@ -17,6 +17,8 @@ import {
   DashboardLoadingPanel,
   DashboardTableSkeleton,
 } from "@/components/dashboard/DashboardLoadingPanel";
+import { useDashboardToast } from "@/components/dashboard/ToastProvider";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { statusSurfaceStyles } from "@/lib/dashboard-status";
 import {
   dashboardCardClass,
@@ -26,12 +28,12 @@ import {
   dashboardPrimaryActionClass,
   dashboardSurfaceClass,
 } from "@/lib/dashboard-ui";
-import { buttonVariants } from "@/components/ui/button";
 import {
   trackDashboardCalendarEventOpen,
   trackDashboardCalendarView,
 } from "@/lib/analytics/gtag";
 import { cn } from "@/lib/utils";
+import { bookingReminderText, whatsappUrl } from "@/lib/whatsapp";
 import {
   CALENDAR_START_HOUR as START_HOUR,
   CALENDAR_TOTAL_HOURS as TOTAL_HOURS,
@@ -75,7 +77,8 @@ const navButtonClass = cn(
 );
 
 export default function CalendarPage() {
-  const [view, setView] = useState<CalendarView>("day");
+  const { showToast } = useDashboardToast();
+  const [view, setView] = useState<CalendarView>("agenda");
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 }),
   );
@@ -86,6 +89,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const hydratedView = useRef(false);
 
   // Prefer week on large screens once; never leave week active below lg
@@ -101,7 +105,7 @@ export default function CalendarPage() {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(min-width: 1024px)");
     const sync = () => {
-      setView((v) => (!mq.matches && v === "week" ? "day" : v));
+      setView((v) => (!mq.matches && v === "week" ? "agenda" : v));
     };
     sync();
     mq.addEventListener("change", sync);
@@ -163,12 +167,52 @@ export default function CalendarPage() {
       typeof window !== "undefined" &&
       !window.matchMedia("(min-width: 1024px)").matches
     ) {
-      setView("day");
-      trackDashboardCalendarView({ view: "day" });
+      setView("agenda");
+      trackDashboardCalendarView({ view: "agenda" });
       return;
     }
     setView(next);
     trackDashboardCalendarView({ view: next });
+  }
+
+  async function confirmBooking(bookingId: string) {
+    if (updatingId) return;
+    setUpdatingId(bookingId);
+    try {
+      const response = await fetch(`/api/dashboard/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "confirmed" }),
+      });
+      if (!response.ok) {
+        let description = "Try again or refresh the page.";
+        try {
+          const body = (await response.json()) as { error?: string };
+          if (typeof body.error === "string") description = body.error;
+        } catch {
+          /* keep default */
+        }
+        showToast({
+          title: "Could not confirm booking",
+          description,
+          variant: "error",
+        });
+        return;
+      }
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === bookingId ? { ...booking, status: "confirmed" } : booking,
+        ),
+      );
+    } catch {
+      showToast({
+        title: "Could not confirm booking",
+        description: "Check your connection and try again.",
+        variant: "error",
+      });
+    } finally {
+      setUpdatingId(null);
+    }
   }
 
   return (
@@ -302,26 +346,55 @@ export default function CalendarPage() {
             </div>
           ) : (
             dayBookings.map((b) => (
-              <Link
+              <article
                 key={b.id}
-                href={`/dashboard/bookings/${b.id}`}
-                onClick={() => trackDashboardCalendarEventOpen({ bookingId: b.id })}
-                className={cn(
-                  "flex min-h-14 items-center justify-between gap-3 rounded-lg border px-3 py-3 active:opacity-80",
-                  STATUS_BG[b.status],
-                )}
+                className={cn("rounded-lg border px-3 py-3", STATUS_BG[b.status])}
               >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{b.clientName}</p>
-                  <p className="truncate text-sm opacity-80">
-                    {b.serviceName}
-                    <span className="ml-1.5 capitalize opacity-70">· {b.status.replace("_", " ")}</span>
+                <Link
+                  href={`/dashboard/bookings/${b.id}`}
+                  onClick={() => trackDashboardCalendarEventOpen({ bookingId: b.id })}
+                  className="flex min-h-14 items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{b.clientName}</p>
+                    <p className="truncate text-sm opacity-80">
+                      {b.serviceName}
+                      <span className="ml-1.5 capitalize opacity-70">· {b.status.replace("_", " ")}</span>
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm tabular-nums">
+                    {format(new Date(b.startsAt), "h:mm a")}
                   </p>
+                </Link>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {b.status === "pending" ? (
+                    <Button
+                      type="button"
+                      variant="default"
+                      disabled={updatingId === b.id}
+                      className="min-h-11"
+                      onClick={() => void confirmBooking(b.id)}
+                    >
+                      {updatingId === b.id ? "Updating…" : "Confirm"}
+                    </Button>
+                  ) : null}
+                  <a
+                    href={whatsappUrl(
+                      b.clientPhone,
+                      bookingReminderText({
+                        clientName: b.clientName,
+                        serviceName: b.serviceName,
+                        startsAt: b.startsAt,
+                      }),
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(buttonVariants({ variant: "outline" }), "min-h-11")}
+                  >
+                    WhatsApp
+                  </a>
                 </div>
-                <p className="shrink-0 text-sm tabular-nums">
-                  {format(new Date(b.startsAt), "h:mm a")}
-                </p>
-              </Link>
+              </article>
             ))
           )}
         </div>

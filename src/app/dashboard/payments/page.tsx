@@ -1,13 +1,13 @@
 import { ProGate } from "@/components/ProGate";
 import { requireOwner } from "@/lib/auth";
 import { getPaymentsDashboardList } from "@/lib/dashboard/payments";
-import { formatLkr } from "@/lib/utils";
+import { cn, formatLkr } from "@/lib/utils";
 import Link from "next/link";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 import { DataTable } from "@/components/dashboard/DataTable";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { dashboardOutlineActionClass, dashboardPageClass, dashboardPrimaryActionClass } from "@/lib/dashboard-ui";
+import { dashboardCardClass, dashboardOutlineActionClass, dashboardPageClass, dashboardPrimaryActionClass } from "@/lib/dashboard-ui";
 import { CreditCard } from "lucide-react";
 
 export default async function PaymentsPage({
@@ -39,6 +39,27 @@ export default async function PaymentsPage({
         <DataTable
           rows={rows}
           getRowId={(row) => row.id}
+          mobileCard={(row) => (
+            <article key={row.id} className={cn(dashboardCardClass, "p-4")}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium">{row.clientName}</p>
+                  <p className="text-sm text-muted-foreground">{row.serviceName}</p>
+                </div>
+                <StatusBadge status={row.status} />
+              </div>
+              <p className="mt-3 text-base font-semibold tabular-nums">{formatLkr(row.amountLkr)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{row.orderId ?? "—"}</p>
+              <div className="mt-4 border-t pt-4">
+                <Link
+                  href={`/dashboard/bookings/${row.bookingId}`}
+                  className={dashboardOutlineActionClass}
+                >
+                  Booking
+                </Link>
+              </div>
+            </article>
+          )}
           empty={
             <EmptyState
               icon={CreditCard}

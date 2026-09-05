@@ -61,6 +61,7 @@ export type DashboardOverviewStat = {
 export type DashboardOverviewTodayRow = {
   id: string;
   clientName: string;
+  clientPhone: string;
   serviceName: string;
   staffName: string;
   startsAt: Date;
@@ -219,6 +220,7 @@ export async function getDashboardOverviewData(businessId: string): Promise<Dash
       .select({
         id: bookings.id,
         clientName: bookings.clientName,
+        clientPhone: bookings.clientPhone,
         serviceName: services.name,
         staffName: staff.name,
         startsAt: bookings.startsAt,

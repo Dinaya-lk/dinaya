@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { addDays, startOfDay } from "date-fns";
 import { requireApiBusiness } from "@/lib/api-auth";
 import { db } from "@/db";
 import { bookings, payments, services, staff } from "@/db/schema";
@@ -47,17 +48,22 @@ export async function GET(req: NextRequest) {
   const query = params.get("q")?.trim();
   const exportFormat = params.get("export");
   const now = new Date();
+  const todayStart = startOfDay(now);
+  const tomorrow = addDays(todayStart, 1);
 
   const cursorParam = params.get("cursor");
   const cursor = cursorParam ? new Date(cursorParam) : null;
   if (cursorParam && Number.isNaN(cursor?.getTime())) {
     return NextResponse.json({ error: "cursor must be a valid ISO datetime." }, { status: 400 });
   }
-  const isAscending = tab === "upcoming";
+  const isAscending = tab === "upcoming" || tab === "today";
 
   const filters = [
     eq(bookings.businessId, businessId),
     ...(tab === "upcoming"  ? [gte(bookings.startsAt, now), ne(bookings.status, "cancelled")] : []),
+    ...(tab === "today"
+      ? [gte(bookings.startsAt, todayStart), lt(bookings.startsAt, tomorrow), ne(bookings.status, "cancelled")]
+      : []),
     ...(tab === "past"      ? [lt(bookings.startsAt, now),  ne(bookings.status, "cancelled")] : []),
     ...(tab === "cancelled" ? [eq(bookings.status, "cancelled")]                              : []),
     ...(status && BOOKING_STATUSES.includes(status as typeof BOOKING_STATUSES[number])

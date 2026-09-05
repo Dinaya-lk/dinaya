@@ -5,8 +5,7 @@ import { Activity, CalendarPlus } from "lucide-react";
 import { OnboardingWizard } from "@/components/dashboard/OnboardingWizard";
 import { OnboardingCelebration } from "@/components/dashboard/OnboardingCelebration";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import { StatusBadge } from "@/components/dashboard/StatusBadge";
-import { statusBorderStyles } from "@/lib/dashboard-status";
+import { DashboardTodayRow } from "@/components/dashboard/DashboardTodayRow";
 import {
   formatOverviewActivityAge,
   overviewActionDot,
@@ -108,40 +107,18 @@ export function DashboardOverview({ data }: DashboardOverviewProps) {
             />
           ) : (
             <ul className="divide-y divide-border/50">
-              {data.todayRows.map((row) => {
-                const initials = row.clientName
-                  .split(" ")
-                  .slice(0, 2)
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase();
-                const border = statusBorderStyles[row.status] ?? "border-l-border";
-                return (
-                  <li key={row.id}>
-                    <Link
-                      href={`/dashboard/bookings/${row.id}`}
-                      className={cn(
-                        "flex min-h-14 items-center gap-3 rounded-xl border-l-[3px] px-3 py-3 transition-colors hover:bg-muted/50 sm:px-4",
-                        border,
-                      )}
-                    >
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
-                        {initials}
-                      </span>
-                      <span className="w-[4.5rem] shrink-0 text-base font-semibold tabular-nums tracking-tight">
-                        {format(row.startsAt, "h:mm a")}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{row.clientName}</span>
-                        <span className="block truncate text-sm text-muted-foreground">
-                          {row.serviceName} · {row.staffName}
-                        </span>
-                      </span>
-                      <StatusBadge status={row.status} className="shrink-0" />
-                    </Link>
-                  </li>
-                );
-              })}
+              {data.todayRows.map((row) => (
+                <DashboardTodayRow
+                  key={row.id}
+                  id={row.id}
+                  clientName={row.clientName}
+                  clientPhone={row.clientPhone}
+                  serviceName={row.serviceName}
+                  staffName={row.staffName}
+                  startsAt={row.startsAt}
+                  status={row.status}
+                />
+              ))}
             </ul>
           )}
 
