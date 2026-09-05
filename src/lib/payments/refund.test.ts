@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planRefund, refundInstructions } from "./refund";
+import { planRefund, refundInstructions, requestedRefundAmountLkr } from "./refund";
 
 describe("planRefund", () => {
   it("refunds the remaining amount by default", () => {
@@ -42,6 +42,16 @@ describe("planRefund", () => {
     expect(
       planRefund({ status: "refunded", amountLkr: 1000, refundedAmountLkr: 1000 }).ok,
     ).toBe(false);
+  });
+});
+
+describe("requestedRefundAmountLkr", () => {
+  it("rounds decimals and omits invalid amounts so remaining can be refunded", () => {
+    expect(requestedRefundAmountLkr(1500.4)).toBe(1500);
+    expect(requestedRefundAmountLkr("1500.6")).toBe(1501);
+    expect(requestedRefundAmountLkr(0)).toBeUndefined();
+    expect(requestedRefundAmountLkr("")).toBeUndefined();
+    expect(requestedRefundAmountLkr("abc")).toBeUndefined();
   });
 });
 

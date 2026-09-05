@@ -76,6 +76,17 @@ describe("GET /api/dashboard/bookings", () => {
       expect(Array.isArray(body.bookings)).toBe(true);
     });
 
+    it("loads the business timezone before filtering tab=today", async () => {
+      dbSelectMock
+        .mockReturnValueOnce(makeSelectQuery([{ timezone: "Asia/Colombo" }]))
+        .mockReturnValueOnce(makeSelectQuery([]));
+
+      const req = new NextRequest("http://localhost/api/dashboard/bookings?tab=today");
+      const res = await GET(req);
+      expect(res.status).toBe(200);
+      expect(dbSelectMock).toHaveBeenCalledTimes(2);
+    });
+
     it("signals hasMore and a nextCursor when more rows exist than PAGE_SIZE", async () => {
       const makeRow = (i: number) => ({
         id: `booking_${i}`,

@@ -6,7 +6,7 @@ import { DashboardConfirmDialog } from "@/components/dashboard/DashboardConfirmD
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { dashboardInputClass, dashboardSectionClass } from "@/lib/dashboard-ui";
 import { formatLkr, cn } from "@/lib/utils";
-import { refundInstructions } from "@/lib/payments/refund";
+import { refundInstructions, requestedRefundAmountLkr } from "@/lib/payments/refund";
 
 export type BookingPaymentSummary = {
   id: string;
@@ -32,15 +32,18 @@ export function BookingRefundPanel({ bookingId, payment, onUpdated }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const requested = requestedRefundAmountLkr(amount);
+  const amountLkr = requested == null ? undefined : Math.min(requested, remaining);
+  const confirmAmount = amountLkr ?? remaining;
+
   async function submit() {
     setSaving(true);
     setError("");
-    const requested = Number(amount);
     const res = await fetch(`/api/dashboard/bookings/${bookingId}/refund`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        amountLkr: Number.isFinite(requested) ? requested : remaining,
+        amountLkr,
         reason: reason.trim() || undefined,
       }),
     });
@@ -90,6 +93,8 @@ export function BookingRefundPanel({ bookingId, payment, onUpdated }: Props) {
               type="number"
               min={1}
               max={remaining}
+              step={1}
+              inputMode="numeric"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               className={cn(dashboardInputClass, "mt-1 tabular-nums")}
@@ -121,7 +126,7 @@ export function BookingRefundPanel({ bookingId, payment, onUpdated }: Props) {
         open={open}
         onOpenChange={setOpen}
         title="Record this refund?"
-        description={`This marks LKR ${amount || remaining} as refunded on the booking. Send the money back in ${payment.provider === "payhere" ? "PayHere" : payment.provider === "paypal" ? "PayPal" : "your bank or LankaQR"} first if you have not already.`}
+        description={`This marks ${formatLkr(confirmAmount)} as refunded on the booking. Send the money back in ${payment.provider === "payhere" ? "PayHere" : payment.provider === "paypal" ? "PayPal" : "your bank or LankaQR"} first if you have not already.`}
         confirmLabel={saving ? "Saving…" : "Record refund"}
         variant="destructive"
         onConfirm={() => {

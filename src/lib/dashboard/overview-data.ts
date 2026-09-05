@@ -12,14 +12,13 @@ import {
 } from "@/db/schema";
 import { and, asc, count, desc, eq, gte, lt, sql } from "drizzle-orm";
 import {
-  addDays,
   endOfWeek,
   format,
   formatDistanceToNow,
-  startOfDay,
   startOfWeek,
   subWeeks,
 } from "date-fns";
+import { zonedDayRange } from "@/lib/business-day";
 import { buildPublicBookingUrl, buildPublicBookingUrlLabel } from "@/lib/booking-url";
 import { formatLkr } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
@@ -135,6 +134,7 @@ export async function getDashboardOverviewData(businessId: string): Promise<Dash
       customDomain: businesses.customDomain,
       customDomainVerified: businesses.customDomainVerified,
       onboardingCompletedAt: businesses.onboardingCompletedAt,
+      timezone: businesses.timezone,
     })
     .from(businesses)
     .where(eq(businesses.id, businessId))
@@ -143,8 +143,7 @@ export async function getDashboardOverviewData(businessId: string): Promise<Dash
   if (!business) return null;
 
   const now = new Date();
-  const todayStart = startOfDay(now);
-  const tomorrow = addDays(todayStart, 1);
+  const { start: todayStart, end: tomorrow } = zonedDayRange(now, business.timezone);
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
   const previousWeekStart = subWeeks(weekStart, 1);

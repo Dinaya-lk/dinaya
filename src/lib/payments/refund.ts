@@ -16,6 +16,14 @@ export type PlanRefundResult =
     }
   | { ok: false; error: string };
 
+/** Round a refund amount from the UI or API. Invalid or <= 0 means refund remaining. */
+export function requestedRefundAmountLkr(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.round(n);
+}
+
 export function planRefund(input: PlanRefundInput): PlanRefundResult {
   if (input.status !== "success" && input.status !== "refunded") {
     return { ok: false, error: "Only collected payments can be refunded." };

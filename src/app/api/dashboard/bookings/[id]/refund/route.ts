@@ -5,10 +5,13 @@ import { db } from "@/db";
 import { bookings, payments } from "@/db/schema";
 import { requireApiBusiness } from "@/lib/api-auth";
 import { logActivity } from "@/lib/activity-log";
-import { planRefund } from "@/lib/payments/refund";
+import { planRefund, requestedRefundAmountLkr } from "@/lib/payments/refund";
 
 const bodySchema = z.object({
-  amountLkr: z.number().int().positive().optional(),
+  amountLkr: z.preprocess(
+    (value) => requestedRefundAmountLkr(value),
+    z.number().int().positive().optional(),
+  ),
   reason: z.string().trim().max(500).optional(),
 });
 
@@ -77,7 +80,12 @@ export async function POST(
       refundReason: parsed.data.reason ?? null,
       status: planned.nextStatus,
     })
-    .where(eq(payments.id, payment.id))
+    .where(
+      and(
+        eq(payments.id, payment.id),
+        eq(payments.refundedAmountLkr, payment.refundedAmountLkr),
+      ),
+    )
     .returning({
       id: payments.id,
       amountLkr: payments.amountLkr,
@@ -89,7 +97,10 @@ export async function POST(
     });
 
   if (!updated) {
-    return NextResponse.json({ error: "Could not record the refund." }, { status: 500 });
+    return NextResponse.json(
+      { error: "This payment was updated. Refresh and try again." },
+      { status: 409 },
+    );
   }
 
   void logActivity({
