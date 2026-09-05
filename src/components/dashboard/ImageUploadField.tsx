@@ -8,7 +8,44 @@ import { readFileAsDataUrl } from "@/lib/image-crop";
 import { isOptimizableRemoteImage } from "@/lib/utils";
 import { ImageCropDialog } from "@/components/dashboard/ImageCropDialog";
 
-export type BusinessImageKind = "logo" | "banner" | "gallery";
+export type BusinessImageKind = "logo" | "banner" | "gallery" | "lankaqr";
+
+function UploadPreviewImage({
+  src,
+  circle,
+}: {
+  src: string;
+  circle: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <div className="size-full bg-muted" aria-hidden="true" />;
+  }
+  if (circle) {
+    return (
+      <Image
+        src={src}
+        alt=""
+        width={64}
+        height={64}
+        className="size-full object-contain"
+        unoptimized={!isOptimizableRemoteImage(src)}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <Image
+      src={src}
+      alt=""
+      fill
+      className="object-cover"
+      sizes="320px"
+      unoptimized={!isOptimizableRemoteImage(src)}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 type Props = {
   label: string;
@@ -104,25 +141,11 @@ const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 
       {value.trim() ? (
         <div className={`relative mt-3 overflow-hidden border bg-muted/20 ${previewClasses}`}>
-          {previewShape === "circle" ? (
-            <Image
-              src={value.trim()}
-              alt=""
-              width={64}
-              height={64}
-              className="size-full object-contain"
-              unoptimized={!isOptimizableRemoteImage(value.trim())}
-            />
-          ) : (
-            <Image
-              src={value.trim()}
-              alt=""
-              fill
-              className="object-cover"
-              sizes="320px"
-              unoptimized={!isOptimizableRemoteImage(value.trim())}
-            />
-          )}
+          <UploadPreviewImage
+            key={value.trim()}
+            src={value.trim()}
+            circle={previewShape === "circle"}
+          />
           <button
             type="button"
             onClick={() => onChange("")}
