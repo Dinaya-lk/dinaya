@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApiBusiness } from "@/lib/api-auth";
 import { db } from "@/db";
 import { bookings, services, staff, clients, payments } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { dispatchWebhooks } from "@/lib/webhooks";
 import { logActivity } from "@/lib/activity-log";
 import { rescheduleBooking } from "@/lib/booking-reschedule";
@@ -63,7 +63,35 @@ export async function GET(req: NextRequest,
     .limit(1);
 
   if (!row) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  return NextResponse.json(row);
+
+  const [payment] = await db
+    .select({
+      id: payments.id,
+      amountLkr: payments.amountLkr,
+      refundedAmountLkr: payments.refundedAmountLkr,
+      status: payments.status,
+      provider: payments.provider,
+      payhereOrderId: payments.payhereOrderId,
+      providerOrderId: payments.providerOrderId,
+    })
+    .from(payments)
+    .where(eq(payments.bookingId, id))
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
+
+  return NextResponse.json({
+    ...row,
+    payment: payment
+      ? {
+          id: payment.id,
+          amountLkr: payment.amountLkr,
+          refundedAmountLkr: payment.refundedAmountLkr,
+          status: payment.status,
+          provider: payment.provider,
+          orderId: payment.payhereOrderId ?? payment.providerOrderId,
+        }
+      : null,
+  });
 }
 
 export async function PATCH(

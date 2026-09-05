@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { isOptimizableRemoteImage, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { buildServiceBookingPath } from "@/lib/booking-url";
 import {
   formatHubLocationLine,
@@ -12,6 +11,9 @@ import {
 } from "@/lib/booking-hub-present";
 import { BookingServiceArrow } from "@/components/booking/BookingServiceArrow";
 import { BookingServicePrice } from "@/components/booking/BookingServicePrice";
+import { BookingServiceThumb } from "@/components/booking/BookingServiceThumb";
+import { BookingGalleryStrip } from "@/components/booking/BookingGalleryStrip";
+import { BookingSocialLinks } from "@/components/booking/BookingSocialLinks";
 import { Icon } from "@/components/ui/Icon";
 import { Separator } from "@/components/ui/separator";
 import { BlurFade } from "@/components/ui/blur-fade";
@@ -45,6 +47,10 @@ interface Props {
   businessAddress?: string | null;
   businessPhone?: string | null;
   heroImageUrl?: string | null;
+  gallery?: string[];
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  websiteUrl?: string | null;
   services: BookingService[];
   copy: BookingCopy;
   avgRating?: number | null;
@@ -86,6 +92,10 @@ export default function BookingServiceHub({
   businessAddress,
   businessPhone,
   heroImageUrl,
+  gallery = [],
+  instagramUrl,
+  facebookUrl,
+  websiteUrl,
   services,
   copy,
   avgRating,
@@ -151,20 +161,11 @@ export default function BookingServiceHub({
     );
     const rowContent = (
       <>
-          {service.imageUrl ? (
-            <Image
-              src={service.imageUrl}
-              alt=""
-              width={48}
-              height={48}
-              className="size-12 shrink-0 rounded-xl object-cover image-depth"
-              unoptimized={!isOptimizableRemoteImage(service.imageUrl)}
-            />
-          ) : (
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[var(--booking-accent-muted)] ring-1 ring-border/40">
-              <Icon name={iconName} className="text-lg text-[var(--booking-accent)]" />
-            </div>
-          )}
+          <BookingServiceThumb
+            name={service.name}
+            imageUrl={service.imageUrl}
+            iconName={iconName}
+          />
 
           <div className="min-w-0 flex-1">
             <p className="text-base font-semibold leading-snug text-foreground transition-colors duration-200 group-hover:text-[var(--booking-accent)]">
@@ -174,7 +175,7 @@ export default function BookingServiceHub({
               <p className="mt-0.5 text-xs font-medium text-muted-foreground">{service.categoryName}</p>
             ) : null}
             {service.description ? (
-              <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-1 hidden line-clamp-2 text-sm leading-relaxed text-muted-foreground md:block">
                 {service.description}
               </p>
             ) : null}
@@ -263,7 +264,7 @@ export default function BookingServiceHub({
           >
             {businessName}
           </h1>
-          <p className="mt-2 max-w-md text-[0.9375rem] leading-relaxed text-muted-foreground">
+          <p className="mt-2 hidden max-w-md text-[0.9375rem] leading-relaxed text-muted-foreground md:block">
             {tagline}
           </p>
           {rating && reviewDistribution && initialReviews ? (
@@ -294,6 +295,11 @@ export default function BookingServiceHub({
               <span>{locationLine}</span>
             </p>
           ) : null}
+          <BookingSocialLinks
+            instagramUrl={instagramUrl}
+            facebookUrl={facebookUrl}
+            websiteUrl={websiteUrl}
+          />
 
           <div className="mt-4 w-full border-t border-border/50 pt-4">
             <p className="text-sm text-muted-foreground">
@@ -304,6 +310,13 @@ export default function BookingServiceHub({
         </header>
 
         <Separator className="bg-border/50" />
+
+        {gallery.filter((url) => url && url !== heroImageUrl).length > 0 ? (
+          <BookingGalleryStrip
+            urls={gallery.filter((url) => url && url !== heroImageUrl)}
+            businessName={businessName}
+          />
+        ) : null}
 
         {showSearch ? (
           <div className="px-4 pt-3 md:px-6">

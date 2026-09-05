@@ -1,8 +1,8 @@
-import Image from "next/image";
 import { useMemo, useState } from "react";
-import { formatLkr, isOptimizableRemoteImage, cn } from "@/lib/utils";
+import { cn, formatLkr } from "@/lib/utils";
 import { BookingServiceArrow } from "@/components/booking/BookingServiceArrow";
 import { BookingServicePrice } from "@/components/booking/BookingServicePrice";
+import { BookingServiceThumb } from "@/components/booking/BookingServiceThumb";
 import { BookingServiceSearch } from "@/components/booking/BookingServiceSearch";
 import { BookingServiceListFooter } from "@/components/booking/BookingServiceListFooter";
 import { useServiceListWindow } from "@/components/booking/useServiceListWindow";
@@ -55,20 +55,12 @@ function ServiceRow({
           : "border-border/50 hover:border-[var(--booking-accent)]/25 hover:bg-[var(--booking-accent-muted)] hover:shadow-sm",
       )}
     >
-      {service.imageUrl ? (
-        <Image
-          src={service.imageUrl}
-          alt=""
-          width={44}
-          height={44}
-          className="size-11 shrink-0 rounded-lg object-cover outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
-          unoptimized={!isOptimizableRemoteImage(service.imageUrl)}
-        />
-      ) : (
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[var(--booking-accent-muted)] text-sm font-bold text-[var(--booking-accent)]">
-          {service.name.charAt(0).toUpperCase()}
-        </div>
-      )}
+      <BookingServiceThumb
+        name={service.name}
+        imageUrl={service.imageUrl}
+        fallback="initial"
+        size="sm"
+      />
       <div className="min-w-0 flex-1">
         <p className={cn("font-medium transition-colors duration-200", selected ? "text-[var(--booking-accent)]" : "text-foreground group-hover:text-[var(--booking-accent)]")}>
           {service.name}

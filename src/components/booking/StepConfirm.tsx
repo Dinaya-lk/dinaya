@@ -61,6 +61,22 @@ function fieldErrorId(field: string) {
   return `confirm-error-${field}`;
 }
 
+function LankaQrImage({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <Image
+      src={src}
+      alt="LankaQR"
+      width={144}
+      height={144}
+      className="h-36 w-36 rounded-lg border border-border bg-card object-contain p-2"
+      unoptimized={!isOptimizableRemoteImage(src)}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function FieldError({ id, message }: { id: string; message: string }) {
   return (
     <p id={id} className="mt-1.5 flex items-center gap-1.5 text-sm text-destructive">
@@ -601,14 +617,7 @@ export default function StepConfirm({
         )}
         {business.lankaqrImageUrl && (
           <div className="mt-3">
-            <Image
-              src={business.lankaqrImageUrl}
-              alt="LankaQR"
-              width={144}
-              height={144}
-              className="h-36 w-36 rounded-lg border border-border bg-card object-contain p-2"
-              unoptimized={!isOptimizableRemoteImage(business.lankaqrImageUrl)}
-            />
+            <LankaQrImage src={business.lankaqrImageUrl} />
           </div>
         )}
       </div>

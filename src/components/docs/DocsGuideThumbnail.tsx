@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
-import { getScreenshotForMockup } from "@/lib/docs/visuals";
 import { cn } from "@/lib/utils";
+import { DocsDashboardMockup } from "./mockups/DocsDashboardMockup";
+import { DocsBookingMockup } from "./mockups/DocsBookingMockup";
 
 type Props = {
   mockupId?: string;
@@ -10,14 +10,18 @@ type Props = {
   className?: string;
 };
 
+function shotIdFromSrc(src: string): string | undefined {
+  const match = src.match(/\/docs\/screenshots\/([^/.]+)/);
+  return match?.[1];
+}
+
 /**
- * Hub / related-guide thumbnail — bare product crop, no nested chrome or scale hacks.
+ * Hub / related-guide thumbnail — cropped mockup of the actual guide surface.
  */
 export function DocsGuideThumbnail({ mockupId, screenshotSrc, className }: Props) {
-  const isBooking = mockupId?.startsWith("booking-");
-  const screenshot = screenshotSrc ?? (mockupId ? getScreenshotForMockup(mockupId) : undefined);
+  const id = mockupId ?? (screenshotSrc ? shotIdFromSrc(screenshotSrc) : undefined);
 
-  if (!screenshot) {
+  if (!id) {
     return (
       <div
         className={cn(
@@ -30,6 +34,8 @@ export function DocsGuideThumbnail({ mockupId, screenshotSrc, className }: Props
     );
   }
 
+  const isBooking = id.startsWith("booking-");
+
   return (
     <div
       className={cn(
@@ -38,17 +44,17 @@ export function DocsGuideThumbnail({ mockupId, screenshotSrc, className }: Props
         className,
       )}
     >
-      <Image
-        src={screenshot}
-        alt=""
-        fill
-        unoptimized
-        className={cn(
-          isBooking ? "object-cover object-top" : "object-cover object-left-top",
-          "outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10",
+      <div className="pointer-events-none origin-top-left scale-[0.38]">
+        {isBooking ? (
+          <div className="h-[844px] w-[390px] bg-white">
+            <DocsBookingMockup variant={id} />
+          </div>
+        ) : (
+          <div className="w-[54rem]">
+            <DocsDashboardMockup variant={id} />
+          </div>
         )}
-        sizes="280px"
-      />
+      </div>
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/[0.08] via-black/[0.02] to-transparent dark:from-black/45"
         aria-hidden
