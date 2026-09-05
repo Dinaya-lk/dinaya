@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { docsEase, docsStageSurface } from "@/lib/docs/design-tokens";
-import { getScreenshotForMockup } from "@/lib/docs/visuals";
-import { DocsProductFrame } from "./DocsProductFrame";
+import { docsEase } from "@/lib/docs/design-tokens";
+import { DocsMockupCapture } from "@/components/docs/DocsMockupCapture";
 
 const HERO_SHOTS = ["dashboard-overview", "dashboard-services", "dashboard-marketing"] as const;
 
@@ -21,25 +20,20 @@ export function DocsHeroPreview() {
   }, [reduceMotion]);
 
   const mockupId = HERO_SHOTS[reduceMotion ? 0 : index];
-  const screenshot = getScreenshotForMockup(mockupId);
-
-  if (!screenshot) return null;
 
   return (
     <div className="relative mx-auto mt-10 max-w-3xl">
-      <div className={cnStage()}>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={mockupId}
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reduceMotion ? undefined : { opacity: 0 }}
-            transition={{ duration: 0.35, ease: docsEase }}
-          >
-            <DocsProductFrame src={screenshot} alt="Dinaya dashboard" />
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={mockupId}
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0 }}
+          transition={{ duration: 0.35, ease: docsEase }}
+        >
+          <DocsMockupCapture mockupId={mockupId} staged />
+        </motion.div>
+      </AnimatePresence>
       {!reduceMotion ? (
         <div className="mt-4 flex items-center justify-center gap-1.5" aria-hidden>
           {HERO_SHOTS.map((id, i) => (
@@ -54,8 +48,4 @@ export function DocsHeroPreview() {
       ) : null}
     </div>
   );
-}
-
-function cnStage() {
-  return `rounded-[1.5rem] p-2.5 sm:p-[0.65rem] ${docsStageSurface}`;
 }
