@@ -513,7 +513,8 @@ async function captureBookingFlow(page: Page, slug: string) {
     .catch(() => undefined);
   await settle(phone, /time|date|staff|available|Pick|Continue|When|slot|Select a time|Pick a date/i);
 
-  // Mobile flow hides slots behind an "Available times" sheet trigger.
+  // Mobile booking times are inline now (no "Available times" sheet).
+  // Click the sheet trigger if it still exists — harmless fallback for older layouts.
   const openSlots = phone
     .locator("button:has-text('Available times'), [role='button']:has-text('Available times')")
     .first();
@@ -526,8 +527,8 @@ async function captureBookingFlow(page: Page, slug: string) {
     await screenshotPage(phone, "booking-time", { freeze: false });
   }
 
-  // Sheet slots often report as not visible to Playwright — click via DOM.
-  // Retry once if the confirm form did not appear (sheet can close without selecting).
+  // Times are inline; still click slot buttons via DOM so off-screen slots work.
+  // Retry once if the confirm form did not appear (older sheet layouts can close without selecting).
   for (let attempt = 0; attempt < 2; attempt++) {
     const clickedSlot = await phone.evaluate(`(() => {
       var btn = Array.prototype.find.call(document.querySelectorAll("button"), function (b) {
@@ -549,6 +550,7 @@ async function captureBookingFlow(page: Page, slug: string) {
     })()`);
     if (onConfirm) break;
     if (attempt === 0) {
+      // Harmless fallback if an "Available times" sheet trigger is still in the DOM.
       const reopen = phone
         .locator("button:has-text('Available times'), [role='button']:has-text('Available times')")
         .first();

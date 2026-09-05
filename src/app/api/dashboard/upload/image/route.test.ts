@@ -48,9 +48,11 @@ vi.mock("@/lib/supabase-storage", async (importOriginal) => {
 });
 
 describe("POST /api/dashboard/upload/image", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     mockUpload.mockReset();
     mockUpload.mockResolvedValue({ error: null });
+    const { removeOtherKindVariants } = await import("@/lib/supabase-storage");
+    vi.mocked(removeOtherKindVariants).mockClear();
   });
 
   it("uploads a banner image for the authenticated business", async () => {
@@ -78,6 +80,40 @@ describe("POST /api/dashboard/upload/image", () => {
     expect(path).toBe("00000000-0000-4000-8000-000000000001/banner.webp");
     expect(Buffer.isBuffer(data)).toBe(true);
     expect(options).toEqual(expect.objectContaining({ contentType: "image/webp", upsert: true }));
+  });
+
+  it("uploads a lankaqr image for the authenticated business", async () => {
+    const { POST } = await import("@/app/api/dashboard/upload/image/route");
+    const { removeOtherKindVariants } = await import("@/lib/supabase-storage");
+    const webpBytes = new Uint8Array([
+      0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00,
+      0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x20,
+    ]);
+    const file = new File([webpBytes], "lankaqr.webp", { type: "image/webp" });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("kind", "lankaqr");
+
+    const req = new Request("http://localhost/api/dashboard/upload/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    const res = await POST(req as never);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.url).toContain("https://cdn.example.com");
+    const [path, data, options] = mockUpload.mock.calls[0]!;
+    expect(path).toBe("00000000-0000-4000-8000-000000000001/lankaqr.webp");
+    expect(Buffer.isBuffer(data)).toBe(true);
+    expect(options).toEqual(expect.objectContaining({ contentType: "image/webp", upsert: true }));
+    expect(removeOtherKindVariants).toHaveBeenCalledWith(
+      expect.anything(),
+      "00000000-0000-4000-8000-000000000001",
+      "lankaqr",
+      path,
+    );
   });
 
   it("rejects invalid kinds", async () => {

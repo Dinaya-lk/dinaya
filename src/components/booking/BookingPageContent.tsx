@@ -1,13 +1,13 @@
-import Image from "next/image";
 import { headers } from "next/headers";
 import BookingWizard from "@/components/booking/BookingWizard";
 import EmbedResizeReporter from "@/components/booking/EmbedResizeReporter";
 import { BookingHubFlow } from "@/components/booking/BookingHubFlow";
+import { BookingSafeImage } from "@/components/booking/BookingGalleryStrip";
 import { BookingTheme } from "@/components/booking/BookingTheme";
 import { BookingThemeToggle } from "@/components/booking/BookingThemeToggle";
 import { getBookingCopy } from "@/lib/i18n";
 import { normalizePublicHttpsUrl } from "@/lib/public-url";
-import { isOptimizableRemoteImage, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import type { BookingPageData } from "@/lib/booking/load-page-data";
 import { resolveBookingTheme, type BookingThemeOverrides } from "@/lib/booking-theme";
@@ -208,6 +208,9 @@ export default async function BookingPageContent({
               lankaqrImageUrl: business.lankaqrImageUrl,
               payhereEnabled: business.payhereEnabled,
               paypalEnabled: business.paypalEnabled,
+              instagramUrl,
+              facebookUrl,
+              websiteUrl,
             }}
             services={services}
             staff={staff}
@@ -264,7 +267,7 @@ export default async function BookingPageContent({
                     : "grid-cols-3"
               }`}
             >
-              {gallery.slice(0, 6).map((url: string, i: number) => (
+              {gallery.slice(0, 12).map((url: string, i: number) => (
                 <div
                   key={url}
                   className={`relative overflow-hidden bg-muted ${
@@ -275,14 +278,7 @@ export default async function BookingPageContent({
                         : "aspect-square"
                   }`}
                 >
-                  <Image
-                    src={url}
-                    alt=""
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="object-cover"
-                    unoptimized={!isOptimizableRemoteImage(url)}
-                  />
+                  <BookingSafeImage url={url} sizes="(max-width: 768px) 100vw, 33vw" />
                 </div>
               ))}
             </div>

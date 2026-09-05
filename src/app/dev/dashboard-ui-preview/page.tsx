@@ -45,6 +45,7 @@ const mockOverview: DashboardOverviewData = {
     {
       id: "1",
       clientName: "Nimali Perera",
+      clientPhone: "+94771234567",
       serviceName: "Full legs",
       staffName: "Anya",
       startsAt: new Date("2026-07-22T09:30:00.000Z"),
@@ -53,6 +54,7 @@ const mockOverview: DashboardOverviewData = {
     {
       id: "2",
       clientName: "Sahan Jay",
+      clientPhone: "+94772345678",
       serviceName: "Beard trim",
       staffName: "Kasun",
       startsAt: new Date("2026-07-22T11:00:00.000Z"),
@@ -61,6 +63,7 @@ const mockOverview: DashboardOverviewData = {
     {
       id: "3",
       clientName: "Ishara Fonseka",
+      clientPhone: "+94773456789",
       serviceName: "Brow shape",
       staffName: "Anya",
       startsAt: new Date("2026-07-22T13:00:00.000Z"),

@@ -89,11 +89,11 @@ export async function deleteStorageObjects(
   }
 }
 
-/** Remove logo/banner files with other extensions after a replacement upload. */
+/** Remove logo/banner/lankaqr files with other extensions after a replacement upload. */
 export async function removeOtherKindVariants(
   storage: ReturnType<typeof createBusinessLogosStorage>,
   businessId: string,
-  kind: "logo" | "banner",
+  kind: "logo" | "banner" | "lankaqr",
   keepPath: string,
 ): Promise<void> {
   const { data, error } = await storage.list(businessId);

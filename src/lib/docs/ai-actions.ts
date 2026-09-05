@@ -4,7 +4,6 @@ export type DocsAiProviderId =
   | "chatgpt"
   | "claude"
   | "perplexity"
-  | "google-ai-studio"
   | "grok";
 
 export type DocsAiProviderLaunch =
@@ -45,12 +44,6 @@ export const DOCS_AI_PROVIDERS: DocsAiProvider[] = [
     launch: { strategy: "query", queryParam: "q" },
   },
   {
-    id: "google-ai-studio",
-    label: "Google AI Studio",
-    baseUrl: "https://aistudio.google.com/",
-    launch: { strategy: "clipboard-only" },
-  },
-  {
     id: "grok",
     label: "Grok",
     baseUrl: "https://grok.com/",
@@ -77,7 +70,10 @@ export function buildDocsAiPrompt(input: DocsAiPromptInput): string {
   ].join("\n");
 }
 
-export function buildDocsAiLaunchUrl(provider: DocsAiProvider, prompt: string): string {
+export function buildDocsAiLaunchUrl(
+  provider: Pick<DocsAiProvider, "baseUrl" | "launch">,
+  prompt: string,
+): string {
   if (provider.launch.strategy === "clipboard-only") {
     return provider.baseUrl;
   }

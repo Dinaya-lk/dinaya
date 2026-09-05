@@ -25,10 +25,14 @@ describe("docs ai actions", () => {
   });
 
   it("falls back to provider base url for clipboard-only providers", () => {
-    const provider = DOCS_AI_PROVIDERS.find((item) => item.id === "google-ai-studio");
-    expect(provider).toBeDefined();
-    const url = buildDocsAiLaunchUrl(provider!, "Any prompt");
-    expect(url).toBe("https://aistudio.google.com/");
+    const provider = {
+      id: "x",
+      label: "X",
+      baseUrl: "https://example.com/",
+      launch: { strategy: "clipboard-only" as const },
+    };
+    const url = buildDocsAiLaunchUrl(provider, "Any prompt");
+    expect(url).toBe("https://example.com/");
   });
 
   it("includes canonical and markdown urls in prompt", () => {

@@ -177,7 +177,9 @@ export function DocsBookingMockup({ variant, highlightTarget }: Props) {
                 ))}
               </div>
             </DocsTargetHighlight>
-            <div className="h-10 rounded-lg border border-border bg-muted/30 dark:border-white/10 dark:bg-neutral-900/60" />
+            <div className="min-h-[4.5rem] rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-[9px] leading-relaxed text-muted-foreground dark:border-white/10 dark:bg-neutral-900/60">
+              Share a few words…
+            </div>
           </div>
         )}
       </div>

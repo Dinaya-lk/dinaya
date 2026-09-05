@@ -17,7 +17,7 @@ import { detectImageMimeType, extensionForMimeType } from "@/lib/image-upload-va
 const MAX_BYTES = 4 * 1024 * 1024;
 const MAX_GALLERY_IMAGES = 12;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const ALLOWED_KINDS = new Set(["logo", "banner", "gallery"]);
+const ALLOWED_KINDS = new Set(["logo", "banner", "gallery", "lankaqr"]);
 
 function storagePath(businessId: string, kind: string, ext: string): string {
   if (kind === "gallery") {
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 });
   }
 
-  if (kind === "logo" || kind === "banner") {
+  if (kind === "logo" || kind === "banner" || kind === "lankaqr") {
     await removeOtherKindVariants(storage, businessId, kind, path);
   }
 

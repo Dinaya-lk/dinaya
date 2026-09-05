@@ -65,7 +65,7 @@ export function ReviewForm({ token, clientName }: { token: string; clientName: s
           value={comment}
           onChange={(event) => setComment(event.target.value)}
           rows={4}
-          className="mt-2 w-full resize-none rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          className="mt-2 w-full resize-y rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           placeholder="Share a few words about your experience..."
         />
       </label>

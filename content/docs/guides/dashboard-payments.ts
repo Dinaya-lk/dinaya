@@ -17,7 +17,7 @@ export const dashboardPaymentsGuide: DocsGuide = {
     },
     {
       title: "Per-booking detail",
-      body: "Open any booking to see deposit vs balance, PayHere reference, and refund history.",
+      body: "Open any booking to see the amount collected, PayHere or bank reference, and recorded refunds. Record a refund there after you send the money back in PayHere.",
       visual: { type: "mockup", mockupId: "dashboard-bookings" },
     },
     {

@@ -263,15 +263,17 @@ export default function SettingsForm({ business }: Props) {
               placeholder="Bank, account number, account name, branch, and what reference clients should send on WhatsApp."
             />
           </div>
-          <div>
-            <label className="text-sm font-medium">LankaQR image URL</label>
-            <input
-              value={form.lankaqrImageUrl}
-              onChange={(e) => setForm((f) => ({ ...f, lankaqrImageUrl: e.target.value }))}
-              className={inputCls}
-              placeholder="https://example.com/lankaqr.png"
-            />
-          </div>
+          <ImageUploadField
+            label="LankaQR image"
+            hint="Upload your LankaQR so clients can scan it at checkout. You can still paste a URL."
+            value={form.lankaqrImageUrl}
+            onChange={(url) => setForm((f) => ({ ...f, lankaqrImageUrl: url }))}
+            kind="lankaqr"
+            aspectRatio={1}
+            outputWidth={800}
+            previewShape="square"
+            allowUrl
+          />
         </div>
 
         {/* Social links */}

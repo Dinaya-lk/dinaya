@@ -42,7 +42,7 @@ export const manageBookingsGuide: DocsGuide = {
     },
     {
       title: "Refund a payment",
-      body: "For paid bookings, use Refund on the booking detail page. Full or partial refunds go through PayHere in 5–7 working days.",
+      body: "For paid bookings, open the booking and use Record refund after you send the money back in PayHere, PayPal, or your bank. Full or partial amounts are stored on the booking — PayHere itself is not charged from this button.",
       visual: { type: "mockup", mockupId: "dashboard-bookings" },
       highlightTarget: "bookings-refund",
     },

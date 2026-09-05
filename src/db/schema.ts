@@ -682,6 +682,9 @@ export const payments = pgTable("payments", {
   payhereOrderId: varchar("payhere_order_id", { length: 100 }).unique(),
   payherePayload: jsonb("payhere_payload"),
   providerPayload: jsonb("provider_payload"),
+  refundedAmountLkr: integer("refunded_amount_lkr").default(0).notNull(),
+  refundedAt: timestamp("refunded_at"),
+  refundReason: varchar("refund_reason", { length: 500 }),
   receiptSentAt: timestamp("receipt_sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({

@@ -95,6 +95,24 @@ function sliderValue(value: number | readonly number[]): number {
   return value[0] ?? 0;
 }
 
+function GalleryThumb({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return <div className="size-full bg-muted" aria-hidden="true" />;
+  }
+  return (
+    <Image
+      src={url}
+      alt=""
+      fill
+      className="object-cover"
+      sizes="200px"
+      unoptimized={!isOptimizableRemoteImage(url)}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function contrastBackground(form: ThemeEditorPreviewState): string {
   if (form.bookingPanelBackground === "accent") {
     return tintAccentBackground(form.accentColor, 0.48);
@@ -523,14 +541,7 @@ export function BookingPageThemeEditor({ business, onPreviewChange }: Props) {
             <div className="mt-3 grid grid-cols-2 gap-2">
               {galleryRest.map((url) => (
                 <div key={url} className="group relative aspect-[4/3] overflow-hidden rounded-lg border bg-muted/20">
-                  <Image
-                    src={url}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="200px"
-                    unoptimized={!isOptimizableRemoteImage(url)}
-                  />
+                  <GalleryThumb url={url} />
                   <button
                     type="button"
                     onClick={() => setGalleryRest((prev) => prev.filter((item) => item !== url))}

@@ -36,8 +36,6 @@ jobs:
 
       - run: npm ci
 
-      - run: npx playwright install --with-deps chromium
-
       - name: Resolve capture mode
         id: mode
         env:
@@ -50,8 +48,16 @@ jobs:
           elif [ -n "$DATABASE_URL" ] && [ -n "$AUTH_SECRET" ]; then
             echo "value=live" >> "$GITHUB_OUTPUT"
           else
-            echo "value=preview" >> "$GITHUB_OUTPUT"
+            echo "value=skip" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Skip capture
+        if: steps.mode.outputs.value == 'skip'
+        run: echo "Skipping docs screenshot capture (no live secrets; use workflow_dispatch)."
+
+      - name: Install Playwright
+        if: steps.mode.outputs.value != 'skip'
+        run: npx playwright install --with-deps chromium
 
       - name: Apply database migrations
         if: steps.mode.outputs.value == 'live'
@@ -60,12 +66,14 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Build application
+        if: steps.mode.outputs.value != 'skip'
         run: npm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
 
       - name: Start server
+        if: steps.mode.outputs.value != 'skip'
         run: |
           npm run start -- --port 3000 > /tmp/next-start.log 2>&1 &
           echo $! > /tmp/next-start.pid
@@ -75,18 +83,20 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
 
       - name: Capture docs screenshots
+        if: steps.mode.outputs.value != 'skip'
         run: PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 DOCS_CAPTURE_MODE=${{ steps.mode.outputs.value }} npx tsx scripts/capture-docs-screenshots.ts
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Stop server
-        if: always()
+        if: always() && steps.mode.outputs.value != 'skip'
         run: |
           if [ -f /tmp/next-start.pid ]; then
             kill "$(cat /tmp/next-start.pid)" 2>/dev/null || true
           fi
 
       - name: Commit screenshots
+        if: steps.mode.outputs.value == 'live' || steps.mode.outputs.value == 'preview'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

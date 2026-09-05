@@ -1,16 +1,14 @@
 "use client";
 
 /**
- * Capture / internal preview only — React mockups with optional browser chrome.
- * User-facing docs always use DocsProductFrame / DocsPhoneFrame with live screenshots.
+ * Capture / internal preview + user-facing docs walkthrough visuals.
+ * Always render React mockups — never wrap existing PNG screenshots
+ * (that feedback loop produced identical onboarding crops on every guide).
  */
 
-import Image from "next/image";
 import IPhoneMockup from "@/components/ui/iphone-mockup";
-import { docsFrameShadow } from "@/lib/docs/design-tokens";
-import { getScreenshotForMockup } from "@/lib/docs/visuals";
+import { docsFrameShadow, docsStageSurface } from "@/lib/docs/design-tokens";
 import { cn } from "@/lib/utils";
-import { DocsPhoneFrame } from "./DocsPhoneFrame";
 import { DocsBookingMockup } from "./mockups/DocsBookingMockup";
 import { DocsDashboardMockup } from "./mockups/DocsDashboardMockup";
 
@@ -23,63 +21,63 @@ const lights = {
 type Props = {
   mockupId: string;
   scale?: number;
+  highlightNav?: string;
+  highlightTarget?: string;
+  staged?: boolean;
+  compact?: boolean;
 };
 
-export function DocsMockupCapture({ mockupId, scale = 0.85 }: Props) {
+export function DocsMockupCapture({
+  mockupId,
+  scale = 0.85,
+  highlightNav,
+  highlightTarget,
+  staged = false,
+  compact = false,
+}: Props) {
   const isBooking = mockupId.startsWith("booking-");
-  const screenshot = getScreenshotForMockup(mockupId);
-
-  if (screenshot && isBooking) {
-    return <DocsPhoneFrame src={screenshot} scale={scale} />;
-  }
-
-  if (screenshot && !isBooking) {
-    return (
-      <div
-        className={cn(
-          "overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-neutral-900",
-          docsFrameShadow,
-        )}
-      >
-        <BrowserChrome />
-        <div className="relative aspect-[16/10] w-full">
-          <Image
-            src={screenshot}
-            alt=""
-            fill
-            unoptimized
-            className="object-cover object-left-top"
-            sizes="1280px"
-          />
-        </div>
-      </div>
-    );
-  }
 
   if (isBooking) {
-    return (
+    const phone = (
       <IPhoneMockup
         model="15"
         color="black"
-        scale={scale}
+        scale={compact ? 0.42 : scale}
         showDynamicIsland
         safeArea
         showHomeIndicator
       >
-        <DocsBookingMockup variant={mockupId} />
+        <DocsBookingMockup variant={mockupId} highlightTarget={highlightTarget} />
       </IPhoneMockup>
+    );
+    if (!staged || compact) return phone;
+    return (
+      <div className={cn("flex justify-center rounded-[1.5rem] px-4 py-6 sm:px-8 sm:py-8", docsStageSurface)}>
+        {phone}
+      </div>
     );
   }
 
-  return (
+  const dashboard = (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.08]",
+        "overflow-hidden rounded-2xl border border-black/[0.06] bg-white dark:border-white/[0.08] dark:bg-neutral-900",
         docsFrameShadow,
       )}
     >
       <BrowserChrome />
-      <DocsDashboardMockup variant={mockupId} />
+      <DocsDashboardMockup
+        variant={mockupId}
+        highlightNav={highlightNav}
+        highlightTarget={highlightTarget}
+      />
+    </div>
+  );
+
+  if (!staged || compact) return dashboard;
+  return (
+    <div className={cn("p-2.5 sm:p-[0.65rem]", docsStageSurface, "rounded-[1.35rem] sm:rounded-[1.5rem]")}>
+      {dashboard}
     </div>
   );
 }

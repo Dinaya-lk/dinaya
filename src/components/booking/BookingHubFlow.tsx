@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import BookingWizard from "@/components/booking/BookingWizard";
 import BookingBranding from "@/components/booking/BookingBranding";
 import BookingServiceHub from "@/components/booking/BookingServiceHub";
@@ -18,9 +17,9 @@ import type { BookingRouter } from "@/lib/booking-router";
 import type { Staff, Location } from "@/db/schema";
 import type { CalendarOverlayConfig } from "@/components/booking/useGoogleCalendarOverlay";
 import { useBookingHubNavigation } from "@/lib/booking/use-booking-hub-navigation";
-import { isOptimizableRemoteImage } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { getBusinessRating } from "@/components/booking/BusinessRating";
+import { BookingSafeImage } from "@/components/booking/BookingGalleryStrip";
 
 type Business = {
   id: string;
@@ -38,6 +37,9 @@ type Business = {
   lankaqrImageUrl: string | null;
   payhereEnabled: boolean;
   paypalEnabled: boolean;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  websiteUrl?: string | null;
 };
 
 export type BookingHubFlowProps = {
@@ -124,7 +126,7 @@ export function BookingHubFlow({
   const showSecondarySections = !hideSidebarSections && !(bookerFocus && !showHub);
 
   const layoutMaxWidth = showHub
-    ? "mx-auto w-full max-w-2xl px-0 md:px-4"
+    ? "mx-auto w-full max-w-3xl px-3 md:px-4"
     : bookerFocus
       ? "mx-auto w-full max-w-6xl px-0 md:px-4"
       : "mx-auto max-w-5xl px-0 md:px-8 md:py-6";
@@ -148,6 +150,10 @@ export function BookingHubFlow({
       businessAddress={business.address}
       businessPhone={business.phone}
       heroImageUrl={heroImageUrl}
+      gallery={gallery}
+      instagramUrl={business.instagramUrl}
+      facebookUrl={business.facebookUrl}
+      websiteUrl={business.websiteUrl}
       services={services}
       copy={copy}
       avgRating={avgRating}
@@ -233,7 +239,7 @@ export function BookingHubFlow({
                   : "grid-cols-3"
             }`}
           >
-            {gallery.slice(0, 6).map((url, i) => (
+            {gallery.slice(0, 12).map((url, i) => (
               <div
                 key={url}
                 className={`relative overflow-hidden bg-muted ${
@@ -244,14 +250,7 @@ export function BookingHubFlow({
                       : "aspect-square"
                 }`}
               >
-                <Image
-                  src={url}
-                  alt=""
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                  unoptimized={!isOptimizableRemoteImage(url)}
-                />
+                <BookingSafeImage url={url} sizes="(max-width: 768px) 100vw, 33vw" />
               </div>
             ))}
           </div>

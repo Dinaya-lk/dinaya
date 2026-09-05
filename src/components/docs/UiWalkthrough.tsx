@@ -5,10 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { GuideStep } from "@content/docs/types";
 import { docsEase } from "@/lib/docs/design-tokens";
-import { getScreenshotForMockup } from "@/lib/docs/visuals";
 import { DocsRichText } from "@/lib/docs/rich-text";
-import { DocsPhoneFrame } from "./DocsPhoneFrame";
-import { DocsProductFrame } from "./DocsProductFrame";
+import { DocsMockupCapture } from "@/components/docs/DocsMockupCapture";
 import { Icon } from "@/components/ui/Icon";
 
 type Props = {
@@ -47,16 +45,16 @@ const CLICK_TARGET_LABELS = {
   "booking-cancel": "Cancel button",
 } satisfies Record<HighlightTarget, string>;
 
-function resolveStepSrc(step: GuideStep): string | undefined {
+function resolveStepMockupId(step: GuideStep): string | undefined {
   if (!step.visual) return undefined;
-  if (step.visual.type === "screenshot") return step.visual.src;
-  if (step.visual.type === "mockup") return getScreenshotForMockup(step.visual.mockupId);
+  if (step.visual.type === "mockup") return step.visual.mockupId;
+  if (step.visual.type === "screenshot") return step.visual.src.replace(/^\/docs\/screenshots\//, "").replace(/\.png$/, "");
   return undefined;
 }
 
 function StepVisual({ step }: { step: GuideStep }) {
-  const src = resolveStepSrc(step);
-  if (!src) {
+  const mockupId = resolveStepMockupId(step);
+  if (!mockupId) {
     return (
       <div className="flex aspect-[16/10] items-center justify-center rounded-2xl bg-[hsl(240_6%_96%)] text-sm text-muted-foreground shadow-[0_0_0_1px_rgba(0,0,0,0.06)] dark:bg-[hsl(240_5%_10%)]">
         Follow the steps on the left
@@ -64,31 +62,13 @@ function StepVisual({ step }: { step: GuideStep }) {
     );
   }
 
-  const isBooking =
-    src.includes("booking-") ||
-    (step.visual?.type === "mockup" && step.visual.mockupId.startsWith("booking-"));
-
-  if (isBooking) {
-    return (
-      <DocsPhoneFrame
-        src={src}
-        alt={step.title}
-        highlightTarget={step.highlightTarget}
-        hotspots={step.hotspots}
-        staged
-        scale={0.82}
-      />
-    );
-  }
-
   return (
-    <DocsProductFrame
-      src={src}
-      alt={step.title}
+    <DocsMockupCapture
+      mockupId={mockupId}
       highlightNav={step.highlightNav}
       highlightTarget={step.highlightTarget}
-      hotspots={step.hotspots}
       staged
+      scale={0.82}
     />
   );
 }

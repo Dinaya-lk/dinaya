@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiBusiness } from "@/lib/api-auth";
 import { db } from "@/db";
-import { bookings, payments, services, staff } from "@/db/schema";
+import { bookings, businesses, payments, services, staff } from "@/db/schema";
 import { eq, and, desc, lt, gt, gte, ne, ilike, or } from "drizzle-orm";
+import { DEFAULT_BUSINESS_TIMEZONE, zonedDayRange } from "@/lib/business-day";
 
 const PAGE_SIZE = 50;
 
@@ -47,17 +48,32 @@ export async function GET(req: NextRequest) {
   const query = params.get("q")?.trim();
   const exportFormat = params.get("export");
   const now = new Date();
+  let todayStart: Date | null = null;
+  let tomorrow: Date | null = null;
+  if (tab === "today") {
+    const [business] = await db
+      .select({ timezone: businesses.timezone })
+      .from(businesses)
+      .where(eq(businesses.id, businessId))
+      .limit(1);
+    const range = zonedDayRange(now, business?.timezone ?? DEFAULT_BUSINESS_TIMEZONE);
+    todayStart = range.start;
+    tomorrow = range.end;
+  }
 
   const cursorParam = params.get("cursor");
   const cursor = cursorParam ? new Date(cursorParam) : null;
   if (cursorParam && Number.isNaN(cursor?.getTime())) {
     return NextResponse.json({ error: "cursor must be a valid ISO datetime." }, { status: 400 });
   }
-  const isAscending = tab === "upcoming";
+  const isAscending = tab === "upcoming" || tab === "today";
 
   const filters = [
     eq(bookings.businessId, businessId),
     ...(tab === "upcoming"  ? [gte(bookings.startsAt, now), ne(bookings.status, "cancelled")] : []),
+    ...(tab === "today" && todayStart && tomorrow
+      ? [gte(bookings.startsAt, todayStart), lt(bookings.startsAt, tomorrow), ne(bookings.status, "cancelled")]
+      : []),
     ...(tab === "past"      ? [lt(bookings.startsAt, now),  ne(bookings.status, "cancelled")] : []),
     ...(tab === "cancelled" ? [eq(bookings.status, "cancelled")]                              : []),
     ...(status && BOOKING_STATUSES.includes(status as typeof BOOKING_STATUSES[number])
