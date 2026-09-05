@@ -145,7 +145,7 @@ export const faqCategories: FaqCategory[] = [
       {
         id: "refund",
         q: "How do I issue a refund?",
-        a: "Go to Dashboard → Bookings, open the relevant booking, and click Refund. You can refund the full amount or a partial amount. The refund is processed through PayHere within 5–7 working days.",
+        a: "Open the booking in Dashboard → Bookings, refund the client in PayHere (or your bank / LankaQR), then tap Record refund on the booking. Full or partial amounts are fine. PayHere usually takes 5–7 working days; Dinaya stores the record so your books stay in sync.",
         guideSlug: "manage-bookings",
       },
       {

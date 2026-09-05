@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { BookingRefundPanel, type BookingPaymentSummary } from "@/components/dashboard/BookingRefundPanel";
 import { BookingReschedulePanel } from "@/components/dashboard/BookingReschedulePanel";
 import { DashboardConfirmDialog } from "@/components/dashboard/DashboardConfirmDialog";
 import { DashboardLoadingPanel } from "@/components/dashboard/DashboardLoadingPanel";
@@ -37,6 +38,7 @@ type Booking = {
   staffName: string;
   clientStage: string | null;
   createdAt: string;
+  payment: BookingPaymentSummary | null;
 };
 
 type BookingStatus = Booking["status"];
@@ -152,7 +154,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   });
 
   return (
-    <div className={dashboardPageClass}>
+    <div className={cn(dashboardPageClass, "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-0")}>
       <DashboardPageHeader
         backHref="/dashboard/bookings"
         backLabel="Bookings"
@@ -222,7 +224,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                 rel="noopener noreferrer"
                 className={cn(
                   dashboardOutlineActionClass,
-                  "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/40",
+                  "hidden border-green-200 text-green-700 hover:bg-green-50 md:inline-flex dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/40",
                 )}
               >
                 <Icon name="chat-square" className="text-xs" /> WhatsApp
@@ -237,6 +239,14 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             currentStartsAt={booking.startsAt}
           />
 
+          {booking.payment ? (
+            <BookingRefundPanel
+              bookingId={booking.id}
+              payment={booking.payment}
+              onUpdated={(payment) => setBooking((current) => (current ? { ...current, payment } : current))}
+            />
+          ) : null}
+
           {actions.length > 0 ? (
             <div className={cn(dashboardSectionClass, "space-y-2")}>
               <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -247,7 +257,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                   key={a.next}
                   type="button"
                   variant={a.variant ?? "outline"}
-                  className="min-h-11 w-full"
+                  className={cn("min-h-11 w-full", a.next === "confirmed" && "hidden md:inline-flex")}
                   onClick={() => handleStatusAction(a.next)}
                   disabled={updatingStatus}
                 >
@@ -315,6 +325,29 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+
+      {booking.status === "pending" || booking.clientPhone ? (
+        <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 -mx-4 mt-4 flex gap-2 border-t border-border/60 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
+          <a
+            href={whatsappUrl(booking.clientPhone, waText)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(dashboardOutlineActionClass, "min-h-11 flex-1 justify-center")}
+          >
+            WhatsApp
+          </a>
+          {booking.status === "pending" ? (
+            <Button
+              type="button"
+              className="min-h-11 flex-1"
+              onClick={() => handleStatusAction("confirmed")}
+              disabled={updatingStatus}
+            >
+              {updatingStatus ? "Updating…" : "Confirm"}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       {confirmStatus && CONFIRM_COPY[confirmStatus] ? (
         <DashboardConfirmDialog
