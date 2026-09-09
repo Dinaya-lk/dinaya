@@ -4,6 +4,7 @@ import { endOfDay, startOfDay } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { db } from "@/db";
 import { bookings, businesses, payments, services, staff } from "@/db/schema";
+import { deviceRateLimitSuffix } from "@/lib/device-client";
 import { withRateLimit } from "@/lib/rate-limit";
 import { requireDesktopBookings } from "@/app/api/v1/desktop/_shared";
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     scope: "desktop-bookings-read",
     limit: 240,
     windowSeconds: 60,
-  }, { keySuffix: `${businessId}:${deviceId ?? "unknown"}` });
+  }, { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) });
   if (!limited.ok) return limited.response;
 
   const params = req.nextUrl.searchParams;

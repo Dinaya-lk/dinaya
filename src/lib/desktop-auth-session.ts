@@ -4,15 +4,22 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, businesses, users } from "@/db/schema";
 import { generateApiKey } from "@/lib/api-keys";
-import { desktopNativeBookingsEnabled } from "@/lib/desktop-native";
+import type { DeviceClient } from "@/lib/device-client";
+import { desktopNativeBookingsEnabled, mobileNativeBookingsEnabled } from "@/lib/desktop-native";
+
+export const DESKTOP_DEVICE_SCOPES = ["desktop:read", "desktop:bookings", "desktop:write"];
+export const MOBILE_DEVICE_SCOPES = ["mobile:read", "mobile:bookings", "mobile:write"];
 
 export type DesktopAuthSession = {
+  /** Legacy alias — always present so older clients keep working. Same value as `mobileKey` for mobile sessions. */
   desktopKey: string;
+  /** Preferred field for Android clients. Same value as `desktopKey`. */
+  mobileKey: string;
   auth: {
     deviceId: string;
     deviceName: string;
     keyId: string;
-    keyType: "desktop";
+    keyType: "desktop" | "mobile";
   };
   business: {
     customDomain: string | null;
@@ -24,6 +31,7 @@ export type DesktopAuthSession = {
   };
   featureFlags: {
     desktopNativeBookings: boolean;
+    mobileNativeBookings: boolean;
   };
   user: {
     email: string;
@@ -47,6 +55,7 @@ export async function createDesktopAuthSession(input: {
   deviceName: string;
   email: string;
   password: string;
+  client?: DeviceClient;
 }): Promise<DesktopAuthSession> {
   const email = input.email.trim().toLowerCase();
   const [user] = await db
@@ -84,7 +93,9 @@ export async function createDesktopAuthSession(input: {
   }
 
   const deviceId = randomUUID();
-  const deviceName = input.deviceName.trim() || "Dinaya Desktop";
+  const client: DeviceClient = input.client ?? "desktop";
+  const isMobile = client === "mobile";
+  const deviceName = input.deviceName.trim() || (isMobile ? "Dinaya Android" : "Dinaya Desktop");
   const { keyHash, rawKey } = generateApiKey();
   const [createdKey] = await db
     .insert(apiKeys)
@@ -93,9 +104,9 @@ export async function createDesktopAuthSession(input: {
       deviceId,
       deviceName,
       keyHash,
-      keyType: "desktop",
-      name: `Desktop - ${deviceName}`,
-      scopes: ["desktop:read", "desktop:bookings", "desktop:write"],
+      keyType: isMobile ? "mobile" : "desktop",
+      name: `${isMobile ? "Mobile" : "Desktop"} - ${deviceName}`,
+      scopes: isMobile ? [...MOBILE_DEVICE_SCOPES] : [...DESKTOP_DEVICE_SCOPES],
     })
     .returning({ id: apiKeys.id });
 
@@ -104,7 +115,7 @@ export async function createDesktopAuthSession(input: {
       deviceId,
       deviceName,
       keyId: createdKey.id,
-      keyType: "desktop",
+      keyType: isMobile ? "mobile" : "desktop",
     },
     business: {
       customDomain: business.customDomain,
@@ -115,8 +126,10 @@ export async function createDesktopAuthSession(input: {
       timezone: business.timezone,
     },
     desktopKey: rawKey,
+    mobileKey: rawKey,
     featureFlags: {
       desktopNativeBookings: desktopNativeBookingsEnabled(business.id),
+      mobileNativeBookings: mobileNativeBookingsEnabled(business.id),
     },
     user: {
       email: user.email,

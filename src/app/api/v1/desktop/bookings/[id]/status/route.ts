@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { bookings, payments } from "@/db/schema";
+import { deviceRateLimitSuffix } from "@/lib/device-client";
 import { withRateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/activity-log";
 import { requireDesktopBookings } from "@/app/api/v1/desktop/_shared";
@@ -28,14 +29,14 @@ export async function PATCH(
 ) {
   const authResult = await requireDesktopBookings(req);
   if (!authResult.ok) return authResult.response;
-  const { businessId, deviceId, keyId } = authResult.context;
+  const { businessId, deviceId, keyId, keyType } = authResult.context;
   const { id } = await params;
 
   const limited = await withRateLimit(req, {
     scope: "desktop-booking-mutation",
     limit: 120,
     windowSeconds: 60,
-  }, { keySuffix: `${businessId}:${deviceId ?? "unknown"}` });
+  }, { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) });
   if (!limited.ok) return limited.response;
 
   const parsed = patchSchema.safeParse(await req.json());
@@ -111,7 +112,7 @@ export async function PATCH(
       entityId: updated.id,
       action: "status_changed_desktop",
       meta: {
-        actor: `desktop:${deviceId ?? keyId}`,
+        actor: `${keyType === "mobile" ? "mobile" : "desktop"}:${deviceId ?? keyId}`,
         from: existing.status,
         to: updated.status,
       },

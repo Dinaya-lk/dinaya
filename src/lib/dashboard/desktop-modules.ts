@@ -1,6 +1,6 @@
 import { endOfDay, startOfDay } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
-import { and, asc, avg, count, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, asc, avg, count, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   aiContentCalendar,
@@ -878,7 +878,9 @@ export async function getDesktopModuleData(
       revokedAt: apiKeys.revokedAt,
     })
     .from(apiKeys)
-    .where(and(eq(apiKeys.businessId, businessId), eq(apiKeys.keyType, "desktop")))
+    // Include mobile device keys alongside desktop keys so the Android fleet
+    // is visible in the same settings module.
+    .where(and(eq(apiKeys.businessId, businessId), inArray(apiKeys.keyType, ["desktop", "mobile"])))
     .orderBy(desc(apiKeys.createdAt))
     .limit(20);
 

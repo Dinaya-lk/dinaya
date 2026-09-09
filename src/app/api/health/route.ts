@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkDatabaseHealth } from "@/lib/platform-health";
 import { requireHealthAuth } from "@/lib/health-auth";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

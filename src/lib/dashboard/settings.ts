@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, businesses } from "@/db/schema";
 import { syncBusinessPrimaryLocation } from "@/lib/locations";
@@ -88,7 +88,8 @@ export async function getDesktopSettingsData(businessId: string, currentKeyId: s
       scopes: apiKeys.scopes,
     })
     .from(apiKeys)
-    .where(and(eq(apiKeys.businessId, businessId), eq(apiKeys.keyType, "desktop")))
+    // Include mobile device keys alongside desktop keys (Android fleet).
+    .where(and(eq(apiKeys.businessId, businessId), inArray(apiKeys.keyType, ["desktop", "mobile"])))
     .orderBy(desc(apiKeys.createdAt))
     .limit(50);
 
@@ -165,7 +166,7 @@ export async function revokeCurrentDesktopDevice(businessId: string, currentKeyI
     .where(and(
       eq(apiKeys.id, currentKeyId),
       eq(apiKeys.businessId, businessId),
-      eq(apiKeys.keyType, "desktop"),
+      inArray(apiKeys.keyType, ["desktop", "mobile"]),
     ))
     .returning({ id: apiKeys.id });
 

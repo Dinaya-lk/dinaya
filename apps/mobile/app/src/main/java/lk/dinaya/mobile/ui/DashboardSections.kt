@@ -1,5 +1,27 @@
 package lk.dinaya.mobile.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.BookOnline
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.graphics.vector.ImageVector
+
 enum class MobileDashboardGroup(val label: String) {
     Workspace("Workspace"),
     Catalog("Catalog"),
@@ -173,3 +195,26 @@ val mobileDashboardSections = listOf(
 
 fun dashboardSectionByKey(key: String): MobileDashboardSection =
     mobileDashboardSections.firstOrNull { it.key == key } ?: mobileDashboardSections.first()
+
+fun sectionIcon(key: String): ImageVector = when (key) {
+    "overview" -> Icons.Filled.Home
+    "calendar" -> Icons.Filled.CalendarMonth
+    "bookings" -> Icons.Filled.BookOnline
+    "clients" -> Icons.Filled.Groups
+    "services" -> Icons.Filled.ContentCut
+    "staff" -> Icons.Filled.Person
+    "locations" -> Icons.Filled.Place
+    "availability" -> Icons.Filled.Schedule
+    "reviews" -> Icons.Filled.Star
+    "payments" -> Icons.Filled.Payments
+    "marketing" -> Icons.Filled.Share
+    "deals" -> Icons.Filled.LocalOffer
+    "broadcasts" -> Icons.Filled.Campaign
+    "aiHub" -> Icons.Filled.AutoAwesome
+    "reports" -> Icons.Filled.Assessment
+    "integrations" -> Icons.Filled.Extension
+    "automations" -> Icons.Filled.Bolt
+    "billing" -> Icons.Filled.AccountBalanceWallet
+    "settings" -> Icons.Filled.Settings
+    else -> Icons.Filled.Home
+}

@@ -16,7 +16,7 @@ import { z } from "@/lib/validation";
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(10).default(["bookings:read"]),
-  keyType: z.enum(["generic", "desktop"]).default("generic"),
+  keyType: z.enum(["generic", "desktop", "mobile"]).default("generic"),
   deviceId: z.string().trim().min(1).max(120).optional(),
   deviceName: z.string().trim().min(1).max(120).optional(),
 });
@@ -61,6 +61,9 @@ export async function POST(req: NextRequest) {
     const needsDesktopScopes = parsed.data.scopes.some(
       (scope) => scope === "desktop:read" || scope === "desktop:bookings" || scope === "desktop:write",
     );
+    const needsMobileScopes = parsed.data.scopes.some(
+      (scope) => scope === "mobile:read" || scope === "mobile:bookings" || scope === "mobile:write",
+    );
 
     try {
       if (needsVoiceScopes) {
@@ -71,7 +74,7 @@ export async function POST(req: NextRequest) {
           );
         }
         await requirePro(businessId, "aiVoiceReceptionist");
-      } else if (needsDesktopScopes) {
+      } else if (needsDesktopScopes || needsMobileScopes) {
         await requirePro(businessId, "webhooks");
       } else {
         await requirePro(businessId, "webhooks");
