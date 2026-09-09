@@ -8,6 +8,7 @@ import {
   businessInactiveMessage,
   getBusinessActiveStatus,
 } from "@/lib/business-active";
+import { grantDeveloperFullAccess } from "@/lib/developer-access";
 
 export type ApiBusinessContext = {
   businessId: string;
@@ -127,6 +128,11 @@ export async function requireApiBusiness({
   if (inactiveResponse) {
     return { ok: false, response: inactiveResponse };
   }
+
+  await grantDeveloperFullAccess({
+    businessId,
+    email: dbUser.email,
+  });
 
   return {
     ok: true,

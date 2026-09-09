@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { db } from "@/db";
 import { platformAdminMembers } from "@/db/schema";
+import {
+  getPlatformAdminAllowlistEmails,
+  isAllowlistedPlatformAdminEmail,
+} from "@/lib/developer-access-emails";
 
 export type PlatformAdminMember = {
   id: string;
@@ -15,16 +19,11 @@ export type PlatformAdminMember = {
 };
 
 function getEnvAllowlist(): string[] {
-  const raw = process.env.PLATFORM_ADMIN_EMAILS ?? "";
-  return raw
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+  return getPlatformAdminAllowlistEmails();
 }
 
 export function isEnvPlatformAdmin(email?: string | null): boolean {
-  if (!email) return false;
-  return getEnvAllowlist().includes(email.toLowerCase());
+  return isAllowlistedPlatformAdminEmail(email);
 }
 
 export async function listPlatformAdminMembers(): Promise<PlatformAdminMember[]> {

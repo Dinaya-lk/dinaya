@@ -1,9 +1,15 @@
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, businesses, users } from "@/db/schema";
 import { generateApiKey } from "@/lib/api-keys";
+import { grantDeveloperFullAccess } from "@/lib/developer-access";
+import {
+  DEVELOPER_FULL_ACCESS_PLAN,
+  isDeveloperFullAccessEmail,
+  normalizeEmail,
+} from "@/lib/developer-access-emails";
 import type { DeviceClient } from "@/lib/device-client";
 import { desktopNativeBookingsEnabled, mobileNativeBookingsEnabled } from "@/lib/desktop-native";
 
@@ -57,11 +63,11 @@ export async function createDesktopAuthSession(input: {
   password: string;
   client?: DeviceClient;
 }): Promise<DesktopAuthSession> {
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeEmail(input.email);
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email))
+    .where(sql`lower(${users.email}) = ${email}`)
     .limit(1);
 
   if (!user) {
@@ -92,6 +98,14 @@ export async function createDesktopAuthSession(input: {
     throw new DesktopAuthError("Invalid email or password.", 401);
   }
 
+  await grantDeveloperFullAccess({
+    businessId: business.id,
+    email: user.email,
+  });
+  const plan = isDeveloperFullAccessEmail(user.email)
+    ? DEVELOPER_FULL_ACCESS_PLAN
+    : business.plan;
+
   const deviceId = randomUUID();
   const client: DeviceClient = input.client ?? "desktop";
   const isMobile = client === "mobile";
@@ -121,7 +135,7 @@ export async function createDesktopAuthSession(input: {
       customDomain: business.customDomain,
       id: business.id,
       name: business.name,
-      plan: business.plan,
+      plan,
       slug: business.slug,
       timezone: business.timezone,
     },

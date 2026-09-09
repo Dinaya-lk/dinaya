@@ -630,11 +630,21 @@ export class PlanLimitError extends Error {
 }
 
 export async function getBusinessPlan(businessId: string): Promise<Plan> {
-  const [{ db }, { businesses }, { eq }] = await Promise.all([
+  const [
+    { db },
+    { businesses },
+    { eq },
+    { grantDeveloperFullAccessForBusiness },
+  ] = await Promise.all([
     import("@/db"),
     import("@/db/schema"),
     import("drizzle-orm"),
+    import("@/lib/developer-access"),
   ]);
+
+  if (await grantDeveloperFullAccessForBusiness(businessId)) {
+    return "max";
+  }
 
   const [business] = await db
     .select({

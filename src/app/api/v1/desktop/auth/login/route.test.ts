@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 const bcryptCompareMock = vi.hoisted(() => vi.fn());
 const dbSelectMock = vi.hoisted(() => vi.fn());
 const dbInsertMock = vi.hoisted(() => vi.fn());
+const dbUpdateMock = vi.hoisted(() => vi.fn());
 const generateApiKeyMock = vi.hoisted(() => vi.fn());
 const withRateLimitMock = vi.hoisted(() => vi.fn());
 
@@ -15,6 +16,7 @@ vi.mock("@/db", () => ({
   db: {
     insert: dbInsertMock,
     select: dbSelectMock,
+    update: dbUpdateMock,
   },
 }));
 
@@ -41,6 +43,14 @@ function makeInsertQuery(result: unknown) {
   const query = {
     returning: vi.fn(async () => result),
     values: vi.fn(() => query),
+  };
+  return query;
+}
+
+function makeUpdateQuery() {
+  const query = {
+    set: vi.fn(() => query),
+    where: vi.fn(async () => undefined),
   };
   return query;
 }
@@ -102,6 +112,50 @@ describe("POST /api/v1/desktop/auth/login", () => {
         scopes: ["desktop:read", "desktop:bookings", "desktop:write"],
       }),
     );
+  });
+
+  it("promotes the founder Gmail account to Growth on device login", async () => {
+    dbSelectMock
+      .mockReturnValueOnce(makeSelectQuery([
+        {
+          id: "00000000-0000-4000-8000-000000000002",
+          businessId: "00000000-0000-4000-8000-000000000001",
+          email: "suvenseoras@gmail.com",
+          name: "Suven",
+          passwordHash: "hash",
+          role: "owner",
+        },
+      ]))
+      .mockReturnValueOnce(makeSelectQuery([
+        {
+          id: "00000000-0000-4000-8000-000000000001",
+          name: "Dinaya Salon",
+          slug: "dinaya-salon",
+          timezone: "Asia/Colombo",
+          plan: "trial",
+          customDomain: null,
+          deletedAt: null,
+          isSuspended: false,
+        },
+      ]));
+    dbInsertMock.mockReturnValueOnce(makeInsertQuery([{ id: "key_1" }]));
+    dbUpdateMock.mockReturnValueOnce(makeUpdateQuery());
+    bcryptCompareMock.mockResolvedValue(true);
+
+    const req = new NextRequest("http://localhost/api/v1/desktop/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        email: "SuvenSeoras@gmail.com",
+        password: "secret",
+        deviceName: "Pixel",
+      }),
+    });
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.business.plan).toBe("max");
+    expect(dbUpdateMock).toHaveBeenCalledOnce();
   });
 
   it("rejects invalid credentials", async () => {

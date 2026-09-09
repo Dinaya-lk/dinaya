@@ -1,10 +1,12 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/db";
 import { businesses, users } from "@/db/schema";
 import { authConfig } from "@/auth.config";
+import { grantDeveloperFullAccess } from "@/lib/developer-access";
+import { normalizeEmail } from "@/lib/developer-access-emails";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -53,10 +55,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!credentials?.email || !credentials?.password) return null;
 
+        const email = normalizeEmail(String(credentials.email));
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.email, credentials.email as string))
+          .where(sql`lower(${users.email}) = ${email}`)
           .limit(1);
 
         if (!user) return null;
@@ -79,6 +82,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           user.passwordHash,
         );
         if (!valid) return null;
+
+        await grantDeveloperFullAccess({
+          businessId: user.businessId,
+          email: user.email,
+        });
 
         return {
           id: user.id,

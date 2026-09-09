@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAnyApiKey } from "@/lib/api-key-auth";
+import { grantDeveloperFullAccessForBusiness } from "@/lib/developer-access";
 import {
   DEVICE_BOOKINGS_SCOPES,
   DEVICE_READ_SCOPES,
@@ -28,13 +29,20 @@ function deviceModulesEnabled(businessId: string): boolean {
   );
 }
 
+async function withDeveloperAccess<T extends { ok: true; context: { businessId: string } }>(
+  result: T,
+): Promise<T> {
+  await grantDeveloperFullAccessForBusiness(result.context.businessId);
+  return result;
+}
+
 export async function requireMobileRead(req: NextRequest) {
   const keyResult = await requireAnyApiKey(req, [...DEVICE_READ_SCOPES]);
   if (!keyResult.ok) return keyResult;
   if (!deviceModulesEnabled(keyResult.context.businessId)) {
     return { ok: false as const, response: featureDisabledResponse() };
   }
-  return keyResult;
+  return withDeveloperAccess(keyResult);
 }
 
 export async function requireMobileBookings(req: NextRequest) {
@@ -43,7 +51,7 @@ export async function requireMobileBookings(req: NextRequest) {
   if (!deviceModulesEnabled(keyResult.context.businessId)) {
     return { ok: false as const, response: featureDisabledResponse() };
   }
-  return keyResult;
+  return withDeveloperAccess(keyResult);
 }
 
 export async function requireMobileWrite(req: NextRequest) {
@@ -52,5 +60,5 @@ export async function requireMobileWrite(req: NextRequest) {
   if (!deviceModulesEnabled(keyResult.context.businessId)) {
     return { ok: false as const, response: featureDisabledResponse() };
   }
-  return keyResult;
+  return withDeveloperAccess(keyResult);
 }

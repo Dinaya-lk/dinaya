@@ -2,9 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const requireAnyApiKeyMock = vi.hoisted(() => vi.fn());
+const grantDeveloperFullAccessForBusinessMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api-key-auth", () => ({
   requireAnyApiKey: requireAnyApiKeyMock,
+}));
+
+vi.mock("@/lib/developer-access", () => ({
+  grantDeveloperFullAccessForBusiness: grantDeveloperFullAccessForBusinessMock,
 }));
 
 import {
@@ -33,6 +38,7 @@ describe("mobile auth guards", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requireAnyApiKeyMock.mockResolvedValue(okMobile);
+    grantDeveloperFullAccessForBusinessMock.mockResolvedValue(false);
   });
 
   it("accepts mobile + desktop scopes on read endpoints", async () => {
