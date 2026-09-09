@@ -53,7 +53,7 @@ Android FCM device registration for new-booking and reminder pushes is still fut
 
 ### App shell
 
-1. Email/password sign-in through the mobile auth endpoint.
+1. Email/password sign-in through the mobile auth endpoint. Physical phones always use `https://dinaya-lk.vercel.app`. Instant Demo Login and localhost are emulator-only.
 2. Bottom tabs for Home, Calendar, Bookings, Clients; More sheet for catalog, growth, and configure.
 3. Native create sheets for bookings, clients, services, staff, locations, deals, and broadcasts.
 4. Dinaya web design language: blue primary actions, warm auth background, white cards, slate type, booking status accents, Dinaya.lk mark.

@@ -79,6 +79,8 @@ describe("Android merchant shell vs web dashboard", () => {
   const appKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/ui/DinayaMobileApp.kt");
   const themeKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/ui/DinayaTheme.kt");
   const clientKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/data/DinayaApiClient.kt");
+  const envKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/data/DeviceEnvironment.kt");
+  const viewModelKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/ui/DinayaViewModel.kt");
   const globalsCss = readWorkspace("src/app/globals.css");
   const bottomNavTsx = readWorkspace("src/components/dashboard/DashboardBottomNav.tsx");
   const signInTsx = readWorkspace("src/app/auth/signin/page.tsx");
@@ -185,8 +187,12 @@ describe("Android merchant shell vs web dashboard", () => {
     expect(appKt).toContain("/register");
   });
 
-  it("hides the local demo login outside debug builds", () => {
-    expect(appKt).toContain("if (BuildConfig.DEBUG)");
+  it("hides Instant Demo Login on physical phones, even in debug APKs", () => {
+    expect(appKt).toContain("showDeveloperSignInTools()");
     expect(appKt).toContain("Instant Demo Login");
+    expect(envKt).toContain("fun defaultApiBaseUrl");
+    expect(envKt).toContain("isEmulatorDevice");
+    expect(viewModelKt).toContain("defaultApiBaseUrl()");
+    expect(viewModelKt.includes("if (BuildConfig.DEBUG) \"http://127.0.0.1:3002\"")).toBe(false);
   });
 });

@@ -811,4 +811,29 @@ class DinayaApiClientTest {
         assertEquals("Haircut", servicePayload.items[0].title)
         assertEquals("svc_1", servicePayload.items[0].id)
     }
+
+    @Test
+    fun isLoopbackBaseUrlDetectsLocalHosts() {
+        assertEquals(true, isLoopbackBaseUrl("http://127.0.0.1:3002"))
+        assertEquals(true, isLoopbackBaseUrl("http://localhost:3002"))
+        assertEquals(true, isLoopbackBaseUrl("http://10.0.2.2:3002"))
+        assertEquals(false, isLoopbackBaseUrl("https://dinaya-lk.vercel.app"))
+        assertEquals(false, isLoopbackBaseUrl("https://dinaya.lk"))
+    }
+
+    @Test
+    fun friendlyConnectionErrorHidesOkHttpInternalsOnLoopback() {
+        val raw = java.io.IOException("unexpected end of stream on com.android.okhttp.Address@ed332ef6")
+        val message = friendlyConnectionError(raw, "http://127.0.0.1:3002")
+        assertEquals(false, message.contains("okhttp", ignoreCase = true))
+        assertEquals(true, message.contains("127.0.0.1"))
+    }
+
+    @Test
+    fun friendlyConnectionErrorHidesOkHttpInternalsOnProduction() {
+        val raw = java.io.IOException("unexpected end of stream on com.android.okhttp.Address@ed332ef6")
+        val message = friendlyConnectionError(raw, "https://dinaya-lk.vercel.app")
+        assertEquals(false, message.contains("okhttp", ignoreCase = true))
+        assertEquals("Couldn't reach Dinaya. Check your internet and try again.", message)
+    }
 }

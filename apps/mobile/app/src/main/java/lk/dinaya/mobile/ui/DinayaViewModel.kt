@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import lk.dinaya.mobile.BuildConfig
 import lk.dinaya.mobile.data.AndroidKeystoreTokenStore
 import lk.dinaya.mobile.data.AvailabilityMember
 import lk.dinaya.mobile.data.AvailabilityWindow
@@ -33,6 +32,10 @@ import lk.dinaya.mobile.data.StaffUpsertRequest
 import lk.dinaya.mobile.data.StoredSession
 import lk.dinaya.mobile.data.UpdateBookingRequest
 import lk.dinaya.mobile.data.combineDateTimeToIso
+import lk.dinaya.mobile.data.defaultApiBaseUrl
+import lk.dinaya.mobile.data.friendlyConnectionError
+import lk.dinaya.mobile.data.isEmulatorDevice
+import lk.dinaya.mobile.data.isLoopbackBaseUrl
 import lk.dinaya.mobile.data.CalendarPayload
 import lk.dinaya.mobile.data.OverviewPayload
 import lk.dinaya.mobile.data.ThemePreference
@@ -179,7 +182,7 @@ internal fun parseBookingTime(startsAt: String): String {
 }
 
 data class DinayaUiState(
-    val baseUrl: String = if (BuildConfig.DEBUG) "http://127.0.0.1:3002" else BuildConfig.DINAYA_API_BASE_URL,
+    val baseUrl: String = defaultApiBaseUrl(),
     val email: String = "",
     val password: String = "",
     val deviceName: String = defaultDeviceName(),
@@ -255,7 +258,9 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.update { it.copy(themePreference = initialTheme) }
 
         val savedSession = tokenStore.load()
-        if (savedSession != null) {
+        if (savedSession != null && isLoopbackBaseUrl(savedSession.baseUrl) && !isEmulatorDevice()) {
+            tokenStore.clear()
+        } else if (savedSession != null) {
             _uiState.update {
                 it.copy(
                     baseUrl = savedSession.baseUrl,
@@ -428,7 +433,18 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         val baseUrl = (overrideBaseUrl ?: snapshot.baseUrl).trim()
         val deviceName = snapshot.deviceName.trim().ifBlank { defaultDeviceName() }
         if (email.isBlank() || password.isBlank() || baseUrl.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Email, password, and API URL are required.") }
+            _uiState.update { it.copy(errorMessage = "Email and password are required.") }
+            return
+        }
+        if (isLoopbackBaseUrl(baseUrl) && !isEmulatorDevice()) {
+            _uiState.update {
+                it.copy(
+                    email = email,
+                    password = password,
+                    baseUrl = defaultApiBaseUrl(),
+                    errorMessage = friendlyConnectionError(Exception("loopback"), baseUrl),
+                )
+            }
             return
         }
 
@@ -503,7 +519,10 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
                 refresh()
             }.onFailure { error ->
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = error.message ?: "Sign in failed.")
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = friendlyConnectionError(error, baseUrl),
+                    )
                 }
             }
         }

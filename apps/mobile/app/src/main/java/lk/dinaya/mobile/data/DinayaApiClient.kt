@@ -542,7 +542,11 @@ class DinayaApiClient(
         deviceKey: String? = null,
         body: JSONObject? = null,
     ): JSONObject {
-        val targets = if (baseUrl.contains("localhost") || baseUrl.contains("127.0.0.1")) {
+        if (isLoopbackBaseUrl(baseUrl) && !isEmulatorDevice()) {
+            throw DinayaApiException(friendlyConnectionError(Exception("loopback"), baseUrl))
+        }
+
+        val targets = if (isLoopbackBaseUrl(baseUrl) && isEmulatorDevice()) {
             listOf(baseUrl, "http://127.0.0.1:3002", "http://10.0.2.2:3002").distinct()
         } else {
             listOf(baseUrl)
@@ -558,7 +562,8 @@ class DinayaApiClient(
                 lastException = e
             }
         }
-        throw lastException ?: DinayaApiException("Dinaya connection failed.")
+        throw lastException?.let { DinayaApiException(friendlyConnectionError(it, baseUrl)) }
+            ?: DinayaApiException("Couldn't reach Dinaya. Check your internet and try again.")
     }
 
     /**
@@ -595,33 +600,65 @@ class DinayaApiClient(
         deviceKey: String? = null,
         body: JSONObject? = null,
     ): JSONObject {
-        val connection = resolveDinayaUrl(targetUrl, path).openConnection() as HttpURLConnection
-        connection.requestMethod = method
-        connection.connectTimeout = 8_000
-        connection.readTimeout = 25_000
-        connection.setRequestProperty("Accept", "application/json")
-        connection.setRequestProperty("X-Dinaya-Mobile", "1")
-        if (path.startsWith("/api/v1/desktop/")) {
-            connection.setRequestProperty("X-Dinaya-Desktop", "1")
-        }
-        if (deviceKey != null) {
-            connection.setRequestProperty("Authorization", "Bearer $deviceKey")
-        }
-        if (body != null) {
-            connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.outputStream.use { stream ->
-                stream.write(body.toString().toByteArray(StandardCharsets.UTF_8))
+        var lastError: Exception? = null
+        repeat(2) { attempt ->
+            try {
+                return executeSingleRequestOnce(targetUrl, method, path, deviceKey, body)
+            } catch (e: DinayaApiException) {
+                throw e
+            } catch (e: Exception) {
+                lastError = e
+                val retryable = e.message.orEmpty().contains("unexpected end of stream", ignoreCase = true)
+                if (attempt == 0 && retryable) return@repeat
+                throw DinayaApiException(friendlyConnectionError(e, targetUrl))
             }
         }
+        throw DinayaApiException(friendlyConnectionError(lastError ?: Exception("connection failed"), targetUrl))
+    }
 
-        val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-        val text = stream?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText() }.orEmpty()
-        if (status !in 200..299) {
-            throw DinayaApiException(parseErrorMessage(text), status)
+    private fun executeSingleRequestOnce(
+        targetUrl: String,
+        method: String,
+        path: String,
+        deviceKey: String? = null,
+        body: JSONObject? = null,
+    ): JSONObject {
+        val connection = resolveDinayaUrl(targetUrl, path).openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = method
+            connection.connectTimeout = 12_000
+            connection.readTimeout = 25_000
+            connection.instanceFollowRedirects = true
+            connection.useCaches = false
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("Connection", "close")
+            connection.setRequestProperty("X-Dinaya-Mobile", "1")
+            if (path.startsWith("/api/v1/desktop/")) {
+                connection.setRequestProperty("X-Dinaya-Desktop", "1")
+            }
+            if (deviceKey != null) {
+                connection.setRequestProperty("Authorization", "Bearer $deviceKey")
+            }
+            if (body != null) {
+                val payload = body.toString().toByteArray(StandardCharsets.UTF_8)
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                connection.setFixedLengthStreamingMode(payload.size)
+                connection.outputStream.use { stream ->
+                    stream.write(payload)
+                }
+            }
+
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val text = stream?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText() }.orEmpty()
+            if (status !in 200..299) {
+                throw DinayaApiException(parseErrorMessage(text), status)
+            }
+            return if (text.isBlank()) JSONObject() else JSONObject(text)
+        } finally {
+            connection.disconnect()
         }
-        return if (text.isBlank()) JSONObject() else JSONObject(text)
     }
 
     private fun parseErrorMessage(text: String): String {

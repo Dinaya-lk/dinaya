@@ -142,13 +142,13 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
-import lk.dinaya.mobile.BuildConfig
 import lk.dinaya.mobile.R
 import lk.dinaya.mobile.data.BookingSummary
 import lk.dinaya.mobile.data.ModuleItem
 import lk.dinaya.mobile.data.ModuleMetric
 import lk.dinaya.mobile.data.StoredSession
 import lk.dinaya.mobile.data.ThemePreference
+import lk.dinaya.mobile.data.showDeveloperSignInTools
 
 private data class BottomTab(val routeKey: String, val label: String, val icon: ImageVector)
 
@@ -259,7 +259,7 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
                 )
             }
 
-            if (BuildConfig.DEBUG) {
+            if (showDeveloperSignInTools()) {
                 val dark = isSystemInDarkTheme()
                 Card(
                     colors = CardDefaults.cardColors(
@@ -366,7 +366,7 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
                     shape = DinayaRadiusPill,
                 )
 
-                if (BuildConfig.DEBUG) {
+                if (showDeveloperSignInTools()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
