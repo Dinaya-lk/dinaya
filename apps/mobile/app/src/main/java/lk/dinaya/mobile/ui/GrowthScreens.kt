@@ -107,7 +107,7 @@ internal fun GrowthHeader(
             shape = DinayaRadiusButton,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier
-                .height(36.dp)
+                .height(48.dp)
                 .semantics { contentDescription = "Refresh $title" },
         ) {
             Text("Refresh", style = MaterialTheme.typography.labelMedium)
@@ -644,7 +644,7 @@ internal fun MarketingScreen(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(48.dp)
                             .semantics { contentDescription = "Copy booking page link" },
                     ) {
                         Icon(imageVector = Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -660,7 +660,7 @@ internal fun MarketingScreen(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(48.dp)
                             .semantics { contentDescription = "Share booking page on WhatsApp" },
                     ) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.Chat, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -676,7 +676,7 @@ internal fun MarketingScreen(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
                             .weight(1f)
-                            .height(38.dp)
+                            .height(48.dp)
                             .semantics { contentDescription = "Preview public booking page" },
                     ) {
                         Icon(imageVector = Icons.Filled.OpenInBrowser, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -796,7 +796,7 @@ private fun MarketingToolRow(tool: ModuleItem, bookingUrl: String, businessName:
                 shape = DinayaRadiusButton,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                modifier = Modifier.height(36.dp),
+                modifier = Modifier.height(48.dp),
             ) {
                 Text(
                     when (tool.id) {

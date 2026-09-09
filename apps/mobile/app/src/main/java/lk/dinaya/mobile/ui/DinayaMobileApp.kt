@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -141,6 +142,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
+import lk.dinaya.mobile.BuildConfig
 import lk.dinaya.mobile.R
 import lk.dinaya.mobile.data.BookingSummary
 import lk.dinaya.mobile.data.ModuleItem
@@ -227,7 +229,6 @@ fun Modifier.bounceClick(
 @Composable
 internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
     val context = LocalContext.current
-    val dark = isSystemInDarkTheme()
     var showAdvancedServer by remember { mutableStateOf(false) }
 
     Column(
@@ -258,76 +259,78 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
                 )
             }
 
-            // Instant 1-Tap Demo Test Card
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (dark) Color(0xFF1E293B) else Color(0xFFEFF6FF),
-                ),
-                border = BorderStroke(1.dp, if (dark) Color(0xFF334155) else Color(0xFFBFDBFE)),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .bounceClick {
-                        viewModel.signIn(
-                            overrideEmail = "audit-dark-1781671231095@dinaya.test",
-                            overridePassword = "AuditPass123!",
-                            overrideBaseUrl = "http://127.0.0.1:3002",
-                        )
-                    },
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+            if (BuildConfig.DEBUG) {
+                val dark = isSystemInDarkTheme()
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (dark) Color(0xFF1E293B) else Color(0xFFEFF6FF),
+                    ),
+                    border = BorderStroke(1.dp, if (dark) Color(0xFF334155) else Color(0xFFBFDBFE)),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bounceClick {
+                            viewModel.signIn(
+                                overrideEmail = "audit-dark-1781671231095@dinaya.test",
+                                overridePassword = "AuditPass123!",
+                                overrideBaseUrl = "http://127.0.0.1:3002",
+                            )
+                        },
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center,
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Instant Demo Login",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                            Text(
+                                text = "1-tap sign-in to Dinaya Luxury Salon with live bookings & stats",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Icon(
-                            imageVector = Icons.Filled.AutoAwesome,
+                            imageVector = Icons.Filled.ChevronRight,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp),
                         )
                     }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Instant Demo Login",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                        )
-                        Text(
-                            text = "1-tap sign-in to Dinaya Luxury Salon with live bookings & stats",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Filled.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
                 }
-            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-                Text(
-                    text = "or sign in with credentials",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                    Text(
+                        text = "or sign in with credentials",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -336,6 +339,7 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
                     onValueChange = viewModel::updateEmail,
                     label = "Email",
                     keyboardType = KeyboardType.Email,
+                    shape = DinayaRadiusPill,
                 )
                 AuthField(
                     value = state.password,
@@ -343,66 +347,79 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
                     label = "Password",
                     keyboardType = KeyboardType.Password,
                     isPassword = true,
+                    shape = DinayaRadiusPill,
+                    labelAccessory = {
+                        Text(
+                            text = "Forgot password?",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.clickable {
+                                openWebFallback(context, null, "/forgot-password")
+                            },
+                        )
+                    },
                 )
                 AuthField(
                     value = state.deviceName,
                     onValueChange = viewModel::updateDeviceName,
                     label = "Device name",
+                    shape = DinayaRadiusPill,
                 )
 
-                // Advanced server options toggle
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showAdvancedServer = !showAdvancedServer }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Settings,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Text(
-                        text = if (showAdvancedServer) "Hide server options" else "Server options (advanced)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                AnimatedVisibility(visible = showAdvancedServer) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AuthField(
-                            value = state.baseUrl,
-                            onValueChange = viewModel::updateBaseUrl,
-                            label = "API URL",
+                if (BuildConfig.DEBUG) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showAdvancedServer = !showAdvancedServer }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            OutlinedButton(
-                                onClick = { viewModel.updateBaseUrl("http://127.0.0.1:3002") },
-                                shape = DinayaRadiusButton,
-                                modifier = Modifier.weight(1f),
+                        Text(
+                            text = if (showAdvancedServer) "Hide server options" else "Server options (advanced)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    AnimatedVisibility(visible = showAdvancedServer) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AuthField(
+                                value = state.baseUrl,
+                                onValueChange = viewModel::updateBaseUrl,
+                                label = "API URL",
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("127.0.0.1", style = MaterialTheme.typography.bodySmall)
-                            }
-                            OutlinedButton(
-                                onClick = { viewModel.updateBaseUrl("http://192.168.1.4:3002") },
-                                shape = DinayaRadiusButton,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text("Wi-Fi LAN", style = MaterialTheme.typography.bodySmall)
-                            }
-                            OutlinedButton(
-                                onClick = { viewModel.updateBaseUrl("https://dinaya-lk.vercel.app") },
-                                shape = DinayaRadiusButton,
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Text("Vercel", style = MaterialTheme.typography.bodySmall)
+                                OutlinedButton(
+                                    onClick = { viewModel.updateBaseUrl("http://127.0.0.1:3002") },
+                                    shape = DinayaRadiusButton,
+                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                ) {
+                                    Text("127.0.0.1", style = MaterialTheme.typography.bodySmall)
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.updateBaseUrl("http://192.168.1.4:3002") },
+                                    shape = DinayaRadiusButton,
+                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                ) {
+                                    Text("Wi-Fi LAN", style = MaterialTheme.typography.bodySmall)
+                                }
+                                OutlinedButton(
+                                    onClick = { viewModel.updateBaseUrl("https://dinaya-lk.vercel.app") },
+                                    shape = DinayaRadiusButton,
+                                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                                ) {
+                                    Text("Vercel", style = MaterialTheme.typography.bodySmall)
+                                }
                             }
                         }
                     }
@@ -415,7 +432,7 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
             Button(
                 onClick = viewModel::signIn,
                 enabled = !state.isLoading,
-                shape = RoundedCornerShape(12.dp),
+                shape = DinayaRadiusPill,
                 interactionSource = buttonInteractionSource,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -430,11 +447,21 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
                     .pressScale(buttonInteractionSource),
             ) {
                 if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp,
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            text = "Signing in…",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 } else {
                     Text(
                         text = "Sign in",
@@ -445,7 +472,7 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
             }
 
             Text(
-                text = "Secure sign-in · Your data is encrypted with Android Keystore",
+                text = "Secure sign-in · Your data is encrypted",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -1311,7 +1338,7 @@ internal fun BookingsScreen(
                 onClick = viewModel::refreshSelectedSection,
                 shape = DinayaRadiusButton,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.height(36.dp),
+                modifier = Modifier.height(48.dp),
             ) {
                 Text("Refresh", style = MaterialTheme.typography.labelMedium)
             }
@@ -1548,7 +1575,7 @@ internal fun ClientsScreen(
                 onClick = onRefresh,
                 shape = DinayaRadiusButton,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.height(36.dp),
+                modifier = Modifier.height(48.dp),
             ) {
                 Text("Refresh", style = MaterialTheme.typography.labelMedium)
             }
@@ -1687,7 +1714,7 @@ internal fun BookingDetailSheet(
                                 onClick = { dialPhoneNumber(context, booking.clientPhone) },
                                 shape = DinayaRadiusButton,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                modifier = Modifier.weight(1f).height(40.dp),
+                                modifier = Modifier.weight(1f).height(48.dp),
                             ) {
                                 Icon(imageVector = Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -1698,7 +1725,7 @@ internal fun BookingDetailSheet(
                                 onClick = { sendSmsMessage(context, booking.clientPhone) },
                                 shape = DinayaRadiusButton,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                modifier = Modifier.weight(1f).height(40.dp),
+                                modifier = Modifier.weight(1f).height(48.dp),
                             ) {
                                 Icon(imageVector = Icons.Filled.Sms, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -1717,7 +1744,7 @@ internal fun BookingDetailSheet(
                                 },
                                 shape = DinayaRadiusButton,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                                modifier = Modifier.weight(1f).height(40.dp),
+                                modifier = Modifier.weight(1f).height(48.dp),
                             ) {
                                 Icon(imageVector = Icons.AutoMirrored.Filled.Chat, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -1731,7 +1758,7 @@ internal fun BookingDetailSheet(
                             onClick = { sendEmail(context, booking.clientEmail) },
                             shape = DinayaRadiusButton,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.fillMaxWidth().height(40.dp),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
                         ) {
                             Icon(imageVector = Icons.Filled.Email, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -2026,7 +2053,7 @@ internal fun BookingCard(
                             contentColor = MaterialTheme.colorScheme.primary,
                         ),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                        modifier = Modifier.height(38.dp),
+                        modifier = Modifier.height(48.dp),
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Chat,
@@ -2193,7 +2220,7 @@ internal fun BookingShareCard(
                     shape = DinayaRadiusButton,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                    modifier = Modifier.weight(1f).height(38.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                 ) {
                     Icon(imageVector = Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(3.dp))
@@ -2208,7 +2235,7 @@ internal fun BookingShareCard(
                     shape = DinayaRadiusButton,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                    modifier = Modifier.weight(1f).height(38.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                 ) {
                     Icon(imageVector = Icons.AutoMirrored.Filled.Chat, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(3.dp))
@@ -2223,7 +2250,7 @@ internal fun BookingShareCard(
                     shape = DinayaRadiusButton,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                    modifier = Modifier.weight(1f).height(38.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                 ) {
                     Icon(imageVector = Icons.Filled.OpenInBrowser, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(3.dp))
@@ -2630,6 +2657,7 @@ internal fun BottomTabCell(
 
     Column(
         modifier = modifier
+            .heightIn(min = 48.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -3009,7 +3037,7 @@ internal fun BookingActions(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .height(38.dp),
+                    .height(48.dp),
             ) {
                 if (isPrimary) {
                     Icon(imageVector = Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -3205,15 +3233,24 @@ internal fun AuthField(
     label: String,
     keyboardType: KeyboardType = KeyboardType.Text,
     isPassword: Boolean = false,
+    shape: RoundedCornerShape = RoundedCornerShape(12.dp),
+    labelAccessory: (@Composable () -> Unit)? = null,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            labelAccessory?.invoke()
+        }
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
@@ -3233,7 +3270,7 @@ internal fun AuthField(
                 }
             } else null,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            shape = RoundedCornerShape(12.dp),
+            shape = shape,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outline,

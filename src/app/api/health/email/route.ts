@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkEmailHealth } from "@/lib/platform-health";
 import { requireHealthAuth } from "@/lib/health-auth";
 
-export const runtime = "edge";
+/** Node runtime: checkEmailHealth shares `@/lib/platform-health` with the DB probe, which imports `node:dns`. */
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

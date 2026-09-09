@@ -63,6 +63,24 @@ test.describe("Live Vercel — account creation", () => {
   });
 });
 
+test.describe("Live Vercel — phone visual tokens", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("sign-in matches dashboard copy and cobalt primary", async ({ page }) => {
+    const res = await page.goto("/auth/signin");
+    expect(res?.status()).toBeLessThan(400);
+    await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible();
+    await expect(page.getByText("Sign in to your Dinaya dashboard")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Forgot password?" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Create your booking page/i })).toBeVisible();
+
+    const signIn = page.getByRole("button", { name: /^Sign in$/i });
+    await expect(signIn).toBeVisible();
+    const background = await signIn.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(background.replace(/\s/g, "")).toMatch(/rgb\(37,99,235\)|rgba\(37,99,235/);
+  });
+});
+
 test.describe("Live Vercel — auth redirects", () => {
   test("unauthenticated /dashboard redirects to sign-in on same host", async ({ page }) => {
     test.fixme(

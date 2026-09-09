@@ -16,11 +16,15 @@ vi.mock("@/lib/activity-log", () => ({
   logActivity: vi.fn(async () => undefined),
 }));
 
-import { POST as desktopBroadcastsPOST } from "@/app/api/v1/desktop/broadcasts/route";
-import { POST as mobileBroadcastsPOST } from "@/app/api/v1/mobile/broadcasts/route";
+import { GET as desktopBroadcastsGET, POST as desktopBroadcastsPOST } from "@/app/api/v1/desktop/broadcasts/route";
+import { GET as mobileBroadcastsGET, POST as mobileBroadcastsPOST } from "@/app/api/v1/mobile/broadcasts/route";
 
 describe("mobile broadcast create alias", () => {
   it("aliases POST /broadcasts without duplicating logic", () => {
     expect(mobileBroadcastsPOST).toBe(desktopBroadcastsPOST);
+  });
+
+  it("does not alias broadcasts GET to the desktop list payload", () => {
+    expect(mobileBroadcastsGET).not.toBe(desktopBroadcastsGET);
   });
 });
