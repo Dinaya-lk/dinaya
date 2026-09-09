@@ -161,7 +161,7 @@ test.describe("Live Vercel — phone visual tokens", () => {
 
     const signIn = page.getByRole("button", { name: /^Sign in$/i });
     await expect(signIn).toBeVisible();
-    await saveVisual(page, "web-390-signin-playwright.png");
+    await saveVisual(page, "web-390-signin-playwright.png", true);
     const background = await signIn.evaluate((el) => getComputedStyle(el).backgroundColor);
     const rgb = background.match(/\d+/g)?.map(Number) ?? [];
     // CSS `--primary: 220 82% 53%` computes to rgb(37, 102, 233); brand hex #2563EB is rgb(37, 99, 235).
@@ -214,14 +214,17 @@ test.describe("Live Vercel — phone dashboard shell", () => {
 
     await primary.getByRole("link", { name: "Calendar" }).click();
     await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/No bookings/i).first()).toBeVisible({ timeout: 20_000 });
     await saveVisual(page, "web-390-dashboard-calendar.png", true);
 
     await primary.getByRole("link", { name: "Bookings" }).click();
     await expect(page.getByRole("heading", { name: "Bookings" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/No bookings here yet/i)).toBeVisible({ timeout: 20_000 });
     await saveVisual(page, "web-390-dashboard-bookings.png", true);
 
     await primary.getByRole("link", { name: "Clients" }).click();
     await expect(page.getByRole("heading", { name: "Clients" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/TOTAL CUSTOMERS/i)).toBeVisible({ timeout: 20_000 });
     await saveVisual(page, "web-390-dashboard-clients.png", true);
 
     await primary.getByRole("button", { name: "More" }).click();

@@ -792,7 +792,7 @@ class DinayaApiClientTest {
         assertEquals("Haircut", dealPayload.items[0].title)
         assertEquals("active", dealPayload.items[0].status)
         assertEquals(
-            setOf("Active deals", "Total deals"),
+            setOf("Active Deals", "Total Deals"),
             dealPayload.metrics.map { it.label }.toSet(),
         )
 
