@@ -32,10 +32,19 @@ type SerializableBroadcast = Omit<Broadcast, "updatedAt"> & {
   updatedAt?: Broadcast["updatedAt"] | null;
 };
 
-function channelPreferred(channel: BroadcastChannel): MessageChannel[] {
-  if (channel === "email") return ["email"];
-  if (channel === "whatsapp") return ["whatsapp", "sms"];
-  return ["sms", "whatsapp"];
+export function preferredChannelsForBroadcast(channel: BroadcastChannel): MessageChannel[] {
+  switch (channel) {
+    case "email":
+      return ["email"];
+    case "whatsapp":
+      return ["whatsapp", "sms"];
+    case "sms":
+      return ["sms", "whatsapp"];
+    default: {
+      const _never: never = channel;
+      throw new Error(`Unhandled broadcast channel: ${_never}`);
+    }
+  }
 }
 
 export async function resolveBroadcastRecipients(
@@ -89,7 +98,7 @@ export async function sendBroadcast(
   let failedCount = 0;
 
   const channel = broadcast.channel as BroadcastChannel;
-  const preferredChannels = channelPreferred(channel);
+  const preferredChannels = preferredChannelsForBroadcast(channel);
 
   for (const recipient of capped) {
     const result = await sendMessage({

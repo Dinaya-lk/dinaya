@@ -133,6 +133,40 @@ describe("GET /api/v1/desktop/reports", () => {
     });
   });
 
+  it("forwards 7d range presets into the normalized window", async () => {
+    getReportsDashboardOverviewMock.mockResolvedValue({
+      breakdowns: {
+        bookingsBySource: [],
+        bookingsByStatus: [],
+        revenueByDay: [],
+        revenueByService: [],
+        staffLoad: [],
+        topClients: [],
+      },
+      business: { id: "00000000-0000-4000-8000-000000000001", name: "Salon", timezone: "Asia/Colombo" },
+      export: { csv: "", filename: "dinaya-reports.csv", generatedAt: "2026-09-09T00:00:00.000Z" },
+      metrics: { totalRevenueLkr: 0 },
+      range: { from: "2026-09-03", to: "2026-09-09" },
+      trends: { busiestHours: [], revenueByWeekday: [] },
+    });
+
+    const req = new NextRequest("http://localhost/api/v1/desktop/reports?range=7d");
+    const res = await GET(req);
+
+    expect(res.status).toBe(200);
+    expect(getReportsDashboardOverviewMock).toHaveBeenCalledWith(
+      "00000000-0000-4000-8000-000000000001",
+      expect.objectContaining({
+        from: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        to: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      }),
+    );
+    const [, range] = getReportsDashboardOverviewMock.mock.calls[0] as [string, { from: string; to: string }];
+    const from = new Date(`${range.from}T12:00:00`);
+    const to = new Date(`${range.to}T12:00:00`);
+    expect(Math.round((to.getTime() - from.getTime()) / 86_400_000)).toBe(6);
+  });
+
   it("applies desktop reports rate limit", async () => {
     withRateLimitMock.mockResolvedValue({
       ok: false,

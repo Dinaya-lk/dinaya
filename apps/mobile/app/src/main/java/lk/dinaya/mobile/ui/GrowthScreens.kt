@@ -375,7 +375,7 @@ private fun ReviewRowCard(item: ModuleItem, dark: Boolean, onReply: () -> Unit) 
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(38.dp)
+                    .height(48.dp)
                     .semantics { contentDescription = "Reply to review by ${item.title}" },
             ) {
                 Text("Reply", style = MaterialTheme.typography.labelLarge)
@@ -846,7 +846,7 @@ internal fun DealsScreen(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(48.dp)
                 .semantics { contentDescription = "Create new deal" },
         ) {
             Text("New deal", fontWeight = FontWeight.SemiBold)
@@ -1061,7 +1061,7 @@ internal fun BroadcastsScreen(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(48.dp)
                 .semantics { contentDescription = "Create new broadcast" },
         ) {
             Text("New broadcast", fontWeight = FontWeight.SemiBold)
@@ -1184,13 +1184,28 @@ internal fun BroadcastsScreen(
                     shape = DinayaRadiusButton,
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Test send phone input" },
                 )
-                Button(
+                OutlinedButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         viewModel.sendTestBroadcast(target.id, phone)
                         detailTarget = null
                     },
                     enabled = phone.isNotBlank(),
+                    shape = DinayaRadiusButton,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .semantics { contentDescription = "Send test broadcast" },
+                ) {
+                    Text("Send test", fontWeight = FontWeight.SemiBold)
+                }
+                Button(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.triggerBroadcast(target.id)
+                        detailTarget = null
+                    },
                     shape = DinayaRadiusButton,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -1199,9 +1214,9 @@ internal fun BroadcastsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
-                        .semantics { contentDescription = "Send test broadcast" },
+                        .semantics { contentDescription = "Send broadcast now" },
                 ) {
-                    Text("Send test", fontWeight = FontWeight.SemiBold)
+                    Text("Send now", fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -1289,7 +1304,7 @@ internal fun AiHubScreen(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(48.dp)
                 .semantics { contentDescription = "Run AI reactivation workflow" },
         ) {
             Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -1448,7 +1463,10 @@ internal fun ReportsScreen(
         GrowthFilterChips(
             options = listOf("7d" to "Last 7 days", "30d" to "Last 30 days", "90d" to "Last 90 days"),
             selected = range,
-            onSelect = { range = it },
+            onSelect = {
+                range = it
+                viewModel.selectReportsRange(it)
+            },
             contentLabel = "Reports range",
         )
 

@@ -2673,7 +2673,7 @@ internal fun ModuleWorkspace(
         SiteEmptyState(
             title = payload.emptyState,
             body = if (searchQuery.isNotBlank()) "No results for \"$searchQuery\"."
-            else "Use the web dashboard for setup and advanced edits.",
+            else "Pull to refresh. PayHere, OAuth, and billing still open in the browser.",
         )
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

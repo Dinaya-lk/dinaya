@@ -196,6 +196,7 @@ export function ApiKeysClient() {
           title="No API keys yet"
           description="Generate a scoped key to connect a custom integration or the Dinaya desktop app."
         />
+      ) : (
         <DataTable columns={columns} rows={keys} getRowId={(key) => key.id} />
       )}
 

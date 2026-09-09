@@ -86,7 +86,7 @@ internal fun IntegrationsScreen(
             SiteEmptyState(
                 title = payload?.emptyState?.ifBlank { null } ?: "No integrations yet",
                 body = if (searchQuery.isNotBlank()) "No providers matched \"$searchQuery\"."
-                else "Connect PayHere, social accounts, or voice AI from the web dashboard.",
+                else "Nothing here yet. Pull to refresh, or finish setup on the web if you need OAuth / PayHere keys.",
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -223,7 +223,7 @@ internal fun AutomationsScreen(
             SiteEmptyState(
                 title = payload?.emptyState?.ifBlank { null } ?: "No automations yet",
                 body = if (searchQuery.isNotBlank()) "No rules matched \"$searchQuery\"."
-                else "Reminders and follow-ups will appear here once configured on the web dashboard.",
+                else "Nothing here yet. Pull to refresh, or finish setup on the web if you need OAuth / PayHere keys.",
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

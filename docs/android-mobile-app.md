@@ -1,6 +1,6 @@
 # Dinaya Android Mobile App
 
-Dinaya can ship Android in two phases without duplicating the whole product.
+Dinaya ships Android in two layers without duplicating the whole product.
 
 ## Phase 1: Public Booking App
 
@@ -21,36 +21,31 @@ Before a Play Store build:
 
 ## Phase 2: Merchant Dashboard App
 
-Build a dedicated Android app for business owners instead of porting the Windows shell directly.
+`apps/mobile` is a Kotlin + Jetpack Compose app for salon owners. It is not a port of the Windows Tauri shell.
 
-Recommended shape:
+### API
 
-- `apps/mobile` native Android project in Kotlin and Jetpack Compose.
-- Reuse the existing `/api/v1/desktop/*` route contracts where they fit.
-- Add mobile semantics over time: `mobile` key type, `X-Dinaya-Mobile` request marker, Android device naming, and mobile-specific rate-limit suffixes.
-- Store issued device keys in Android Keystore, not web storage.
-- Use FCM for booking notifications and reminders after the first authenticated dashboard slice works.
+- Primary: `/api/v1/mobile/*` with `X-Dinaya-Mobile: 1`.
+- Login (`POST /api/v1/mobile/auth/login`) issues `mobile` keys (`mobile:read`, `mobile:bookings`, `mobile:write`). Responses include both `mobileKey` and `desktopKey` (same value) for older builds.
+- Write routes are implemented once on `/api/v1/desktop/*` and re-exported as thin mobile aliases.
+- Device keys are stored in Android Keystore, not web storage.
 
-Current native app foundation:
+Native writes now cover walk-in bookings (create / reschedule / cancel), clients, services, staff, locations, availability, review replies, automation toggles, deal pause/reactivate, broadcast send/test, settings profile, and reports range presets (`7d` / `30d` / `90d`).
 
-1. Login with email/password through the existing desktop auth endpoint.
-2. Store the issued bearer key with Android Keystore backed encryption.
-3. Load bootstrap data, today bookings, and all major merchant dashboard modules.
-4. Show the same high-level sections as the web and Windows dashboards: overview, calendar, bookings, clients, services, staff, locations, availability, reviews, payments, marketing, deals, broadcasts, AI Hub, reports, integrations, automations, billing, and settings.
-5. Render typed desktop dashboard responses as native metrics and module cards, with safe booking status updates kept native.
-6. Use the Dinaya web design language: blue primary actions, warm auth background, white dashboard cards, slate typography, booking status accents, and the Dinaya.lk logo mark.
-7. Keep PayHere checkout, provider OAuth, billing changes, API-key management, and deeper CRUD flows as web fallbacks until native edit screens exist.
+Web fallback remains for PayHere checkout, OAuth/provider connect, billing, and API-key management.
 
-Local project entrypoint:
+### App shell
+
+1. Email/password sign-in through the mobile auth endpoint.
+2. Bottom tabs for Home, Calendar, Bookings, Clients; More sheet for catalog, growth, and configure.
+3. Native create sheets for bookings, clients, services, staff, and locations.
+4. Dinaya web design language: blue primary actions, warm auth background, white cards, slate type, booking status accents, Dinaya.lk mark.
+
+Local project:
 
 - `apps/mobile/README.md`
 - `apps/mobile/app/src/main/java/lk/dinaya/mobile/`
 
-Latest local debug APK:
+## Not recommended as the first path
 
-- `deliverables/android/Dinaya-Mobile-debug.apk`
-- SHA-256: `4D1D698DE2C17ABDC660EE92F3789D1FC19F9DAF38A6D0C12C34D8782E242287`
-
-## Not Recommended As The First Path
-
-Do not treat `apps/desktop` as a drop-in Android app. It is a Windows-focused Tauri shell with tray behavior, global shortcuts, desktop notifications, NSIS release output, and OS keyring assumptions. Tauri Android can be tested later, but it needs a mobile-specific pass and emulator/device verification.
+Do not treat `apps/desktop` as a drop-in Android app. It is a Windows-focused Tauri shell with tray behavior, global shortcuts, desktop notifications, NSIS release output, and OS keyring assumptions.

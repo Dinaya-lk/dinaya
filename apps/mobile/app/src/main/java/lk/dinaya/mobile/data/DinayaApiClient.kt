@@ -21,12 +21,12 @@ class DinayaApiClient(
             .put("email", email)
             .put("password", password)
             .put("deviceName", deviceName)
-        request("POST", "/api/v1/desktop/auth/login", body = body).toLoginResult()
+        request("POST", mobilePath("auth/login"), body = body).toLoginResult()
     }
 
     suspend fun fetchBootstrap(deviceKey: String): BootstrapResult = withContext(Dispatchers.IO) {
         try {
-            val raw = request("GET", "/api/v1/desktop/bootstrap", deviceKey = deviceKey)
+            val raw = request("GET", mobilePath("bootstrap"), deviceKey = deviceKey)
             cache?.saveBootstrap(raw)
             raw.toBootstrapResult()
         } catch (e: DinayaApiException) {
@@ -47,7 +47,7 @@ class DinayaApiClient(
     ): BookingsResult = withContext(Dispatchers.IO) {
         val cacheTab = listOf(tab, query.orEmpty(), status.orEmpty()).joinToString("|")
         try {
-            val raw = request("GET", bookingsPath(tab = tab, query = query, status = status), deviceKey = deviceKey)
+            val raw = request("GET", mobileBookingsPath(tab = tab, query = query, status = status), deviceKey = deviceKey)
             cache?.saveBookings(cacheTab, raw)
             raw.toBookingsResult()
         } catch (e: DinayaApiException) {
@@ -60,7 +60,7 @@ class DinayaApiClient(
 
     suspend fun fetchOverview(deviceKey: String): OverviewPayload = withContext(Dispatchers.IO) {
         try {
-            val raw = request("GET", "/api/v1/desktop/overview", deviceKey = deviceKey)
+            val raw = request("GET", mobilePath("overview"), deviceKey = deviceKey)
             cache?.saveOverview(raw)
             raw.toOverviewPayload()
         } catch (e: DinayaApiException) {
@@ -80,7 +80,7 @@ class DinayaApiClient(
         try {
             val raw = request(
                 "GET",
-                calendarPath(view = view, date = date, staffId = staffId),
+                mobileCalendarPath(view = view, date = date, staffId = staffId),
                 deviceKey = deviceKey,
             )
             cache?.saveCalendar(view, date, staffId, raw)
@@ -95,7 +95,7 @@ class DinayaApiClient(
     }
 
     suspend fun fetchDesktopModule(deviceKey: String, module: String): DesktopModulePayload = withContext(Dispatchers.IO) {
-        request("GET", desktopModulePath(module), deviceKey = deviceKey).toDesktopModulePayload(module)
+        request("GET", mobileModulePath(module), deviceKey = deviceKey).toDesktopModulePayload(module)
     }
 
     suspend fun updateBookingStatus(deviceKey: String, bookingId: String, status: String): StatusUpdateResult =
@@ -103,7 +103,7 @@ class DinayaApiClient(
             val body = JSONObject().put("status", status)
             request(
                 method = "PATCH",
-                path = "/api/v1/desktop/bookings/$bookingId/status",
+                path = mobilePath("bookings/$bookingId/status"),
                 deviceKey = deviceKey,
                 body = body,
             ).toStatusUpdateResult()
@@ -129,7 +129,7 @@ class DinayaApiClient(
 
     suspend fun fetchAvailabilityOverview(deviceKey: String): List<AvailabilityMember> =
         withContext(Dispatchers.IO) {
-            val json = request("GET", "/api/v1/desktop/availability", deviceKey = deviceKey)
+            val json = request("GET", mobilePath("availability"), deviceKey = deviceKey)
             json.optJSONArray("members").toAvailabilityMembers()
         }
 
@@ -148,7 +148,7 @@ class DinayaApiClient(
             )
         }
         request(
-            "PATCH", "/api/v1/desktop/availability", deviceKey,
+            "PATCH", mobilePath("availability"), deviceKey,
             JSONObject().put("staffId", staffId).put("rows", arr),
         )
     }
@@ -169,68 +169,91 @@ class DinayaApiClient(
         if (!startTime.isNullOrBlank()) body.put("startTime", startTime) else body.put("startTime", JSONObject.NULL)
         if (!endTime.isNullOrBlank()) body.put("endTime", endTime) else body.put("endTime", JSONObject.NULL)
         if (!reason.isNullOrBlank()) body.put("reason", reason) else body.put("reason", JSONObject.NULL)
-        request("POST", "/api/v1/desktop/availability/overrides", deviceKey, body)
+        request("POST", mobilePath("availability/overrides"), deviceKey, body)
     }
 
     suspend fun deleteAvailabilityOverride(deviceKey: String, id: String, staffId: String): JSONObject =
         withContext(Dispatchers.IO) {
             request(
                 "DELETE",
-                "/api/v1/desktop/availability/overrides?id=$id&staffId=$staffId",
+                mobilePath("availability/overrides?id=$id&staffId=$staffId"),
                 deviceKey = deviceKey,
             )
         }
 
     suspend fun fetchClientDetail(deviceKey: String, id: String): ClientDetailPayload =
         withContext(Dispatchers.IO) {
-            request("GET", "/api/v1/desktop/clients/$id", deviceKey = deviceKey).toClientDetail(id)
+            request("GET", mobilePath("clients/$id"), deviceKey = deviceKey).toClientDetail(id)
         }
 
     suspend fun updateClient(deviceKey: String, id: String, body: JSONObject): JSONObject =
         withContext(Dispatchers.IO) {
-            request("PATCH", "/api/v1/desktop/clients/$id", deviceKey, body)
+            request("PATCH", mobilePath("clients/$id"), deviceKey, body)
         }
 
     suspend fun addClientNote(deviceKey: String, id: String, noteBody: String): JSONObject =
         withContext(Dispatchers.IO) {
             request(
-                "POST", "/api/v1/desktop/clients/$id/notes", deviceKey,
+                "POST", mobilePath("clients/$id/notes"), deviceKey,
                 JSONObject().put("body", noteBody),
             )
         }
 
     suspend fun fetchServiceDetail(deviceKey: String, id: String): JSONObject =
         withContext(Dispatchers.IO) {
-            request("GET", "/api/v1/desktop/services/$id", deviceKey = deviceKey)
+            request("GET", mobilePath("services/$id"), deviceKey = deviceKey)
         }
 
     suspend fun updateService(deviceKey: String, id: String, body: JSONObject): JSONObject =
         withContext(Dispatchers.IO) {
-            request("PATCH", "/api/v1/desktop/services/$id", deviceKey, body)
+            request("PATCH", mobilePath("services/$id"), deviceKey, body)
         }
 
     suspend fun fetchStaffDetail(deviceKey: String, id: String): JSONObject =
         withContext(Dispatchers.IO) {
-            request("GET", "/api/v1/desktop/staff/$id", deviceKey = deviceKey)
+            request("GET", mobilePath("staff/$id"), deviceKey = deviceKey)
         }
 
     suspend fun updateStaff(deviceKey: String, id: String, body: JSONObject): JSONObject =
         withContext(Dispatchers.IO) {
-            request("PATCH", "/api/v1/desktop/staff/$id", deviceKey, body)
+            request("PATCH", mobilePath("staff/$id"), deviceKey, body)
         }
 
     suspend fun fetchLocationDetail(deviceKey: String, id: String): JSONObject =
         withContext(Dispatchers.IO) {
-            request("GET", "/api/v1/desktop/locations/$id", deviceKey = deviceKey)
+            request("GET", mobilePath("locations/$id"), deviceKey = deviceKey)
         }
 
     suspend fun updateLocation(deviceKey: String, id: String, body: JSONObject): JSONObject =
         withContext(Dispatchers.IO) {
-            request("PATCH", "/api/v1/desktop/locations/$id", deviceKey, body)
+            request("PATCH", mobilePath("locations/$id"), deviceKey, body)
         }
 
+    suspend fun createLocation(deviceKey: String, body: LocationUpsertRequest): LocationDetail =
+        withContext(Dispatchers.IO) {
+            request(
+                method = "POST",
+                path = mobilePath("locations"),
+                deviceKey = deviceKey,
+                body = body.toJson(),
+            ).toLocationDetail()
+        }
+
+    suspend fun updateLocation(
+        deviceKey: String,
+        id: String,
+        body: LocationUpsertRequest,
+    ): LocationDetail = withContext(Dispatchers.IO) {
+        request(
+            method = "PATCH",
+            path = mobilePath("locations/$id"),
+            deviceKey = deviceKey,
+            body = body.toJson(),
+        ).toLocationDetail()
+    }
+
     suspend fun logout(deviceKey: String) = withContext(Dispatchers.IO) {
-        request("POST", "/api/v1/desktop/auth/logout", deviceKey = deviceKey, body = JSONObject())
+        request("POST", mobilePath("auth/logout"), deviceKey = deviceKey, body = JSONObject())
         Unit
     }
 
@@ -239,7 +262,7 @@ class DinayaApiClient(
             val body = JSONObject().put("ownerReply", reply)
             request(
                 method = "PATCH",
-                path = "/api/v1/desktop/reviews/$reviewId",
+                path = mobilePath("reviews/$reviewId"),
                 deviceKey = deviceKey,
                 body = body,
             )
@@ -250,9 +273,19 @@ class DinayaApiClient(
             val body = JSONObject().put("isActive", isActive)
             request(
                 method = "PATCH",
-                path = "/api/v1/desktop/automations/$ruleId",
+                path = mobilePath("automations/$ruleId"),
                 deviceKey = deviceKey,
                 body = body,
+            )
+        }
+
+    suspend fun patchDealActive(deviceKey: String, dealId: String, isActive: Boolean): JSONObject =
+        withContext(Dispatchers.IO) {
+            request(
+                method = "PATCH",
+                path = mobilePath("deals/$dealId"),
+                deviceKey = deviceKey,
+                body = JSONObject().put("isActive", isActive),
             )
         }
 
@@ -271,7 +304,7 @@ class DinayaApiClient(
         val body = JSONObject().put("business", business)
         request(
             method = "PATCH",
-            path = "/api/v1/desktop/settings",
+            path = mobilePath("settings"),
             deviceKey = deviceKey,
             body = body,
         )
@@ -283,7 +316,7 @@ class DinayaApiClient(
             if (!clientId.isNullOrBlank()) body.put("clientId", clientId)
             request(
                 method = "POST",
-                path = "/api/v1/desktop/ai/reactivate",
+                path = mobilePath("ai/reactivate"),
                 deviceKey = deviceKey,
                 body = body,
             )
@@ -509,8 +542,11 @@ class DinayaApiClient(
     }
 
     /**
-     * Tries the mobile API equivalent first and falls back to the given
-     * desktop path when the server answers 404. Other API errors propagate.
+     * Tries the mobile API first and falls back to desktop when the server
+     * answers 404. Other API errors propagate.
+     *
+     * - `/api/v1/mobile/...` is tried as-is, then the desktop equivalent
+     * - `/api/v1/desktop/...` tries the mobile equivalent first, then desktop
      */
     private fun executeWithMobileFallback(
         targetUrl: String,
@@ -519,15 +555,17 @@ class DinayaApiClient(
         deviceKey: String? = null,
         body: JSONObject? = null,
     ): JSONObject {
-        val mobile = mobileFallbackFor(path)
-        if (mobile != null && mobile != path) {
+        val mobile = if (path.startsWith("/api/v1/mobile/")) path else mobileFallbackFor(path)
+        val desktop = if (path.startsWith("/api/v1/desktop/")) path else desktopFallbackFor(path)
+
+        if (mobile != null && mobile != desktop) {
             try {
                 return executeSingleRequest(targetUrl, method, mobile, deviceKey, body)
             } catch (e: DinayaApiException) {
                 if (e.statusCode != 404) throw e
             }
         }
-        return executeSingleRequest(targetUrl, method, path, deviceKey, body)
+        return executeSingleRequest(targetUrl, method, desktop ?: path, deviceKey, body)
     }
 
     private fun executeSingleRequest(
@@ -601,6 +639,15 @@ internal fun desktopPath(suffix: String): String = "/api/v1/desktop/${suffix.tri
 internal fun mobileFallbackFor(path: String): String? {
     val prefix = "/api/v1/desktop/"
     return if (path.startsWith(prefix)) "/api/v1/mobile/" + path.removePrefix(prefix) else null
+}
+
+/**
+ * Desktop equivalent of a mobile API path, or null when the path is not a
+ * mobile path (nothing to fall back to).
+ */
+internal fun desktopFallbackFor(path: String): String? {
+    val prefix = "/api/v1/mobile/"
+    return if (path.startsWith(prefix)) "/api/v1/desktop/" + path.removePrefix(prefix) else null
 }
 
 internal fun bookingsPath(
@@ -679,8 +726,8 @@ internal fun combineDateTimeToIso(date: String, time: String): String {
     }.getOrDefault("")
 }
 
-private fun JSONObject.toLoginResult() = LoginResult(
-    deviceKey = optString("desktopKey").ifBlank { optString("deviceKey") },
+internal fun JSONObject.toLoginResult() = LoginResult(
+    deviceKey = optString("mobileKey").ifBlank { optString("desktopKey") }.ifBlank { optString("deviceKey") },
     auth = getJSONObject("auth").toAuthSummary(),
     business = getJSONObject("business").toBusinessSummary(),
     user = getJSONObject("user").toUserSummary(),
@@ -755,6 +802,16 @@ internal fun StaffUpsertRequest.toJson(): JSONObject {
     if (!email.isNullOrBlank()) json.put("email", email)
     if (!phone.isNullOrBlank()) json.put("phone", phone)
     if (isActive != null) json.put("isActive", isActive)
+    return json
+}
+
+internal fun LocationUpsertRequest.toJson(): JSONObject {
+    val json = JSONObject().put("name", name)
+    if (!address.isNullOrBlank()) json.put("address", address)
+    if (!timezone.isNullOrBlank()) json.put("timezone", timezone)
+    if (!phone.isNullOrBlank()) json.put("phone", phone)
+    if (isActive != null) json.put("isActive", isActive)
+    if (isDefault != null) json.put("isDefault", isDefault)
     return json
 }
 
@@ -863,17 +920,44 @@ internal fun JSONObject.toAutomationToggleResult(): AutomationToggleResult {
 internal fun JSONObject.toReportPayload(): ReportPayload {
     val reports = optJSONObject("reports") ?: this
     val metricsArr = reports.optJSONArray("metrics") ?: optJSONArray("metrics")
-    return ReportPayload(
-        range = reports.optString("range").ifBlank { optString("range").ifBlank { "30d" } },
-        metrics = metricsArr.toList { obj ->
+    val metricsObj = if (metricsArr == null) {
+        reports.optJSONObject("metrics") ?: optJSONObject("metrics")
+    } else {
+        null
+    }
+    val metrics = if (metricsArr != null) {
+        metricsArr.toList { obj ->
             ReportMetric(
                 label = obj.optString("label"),
                 value = obj.opt("value")?.toString().orEmpty(),
             )
-        },
+        }
+    } else {
+        metricsObj?.toMetricList().orEmpty().map { metric ->
+            ReportMetric(label = metric.label, value = metric.value)
+        }
+    }
+    return ReportPayload(
+        range = reportsRangeText(reports),
+        metrics = metrics,
         serverTime = optString("serverTime"),
         webPath = optString("webPath").ifBlank { optString("webUrl").ifBlank { "/dashboard/reports" } },
     )
+}
+
+private fun JSONObject.reportsRangeText(): String {
+    val preset = optString("preset").ifBlank { optString("rangePreset") }
+    if (preset.isNotBlank() && this.opt("range") !is JSONObject) {
+        return preset
+    }
+    val rangeValue = opt("range")
+    if (rangeValue is JSONObject) {
+        val from = rangeValue.optString("from")
+        val to = rangeValue.optString("to")
+        return listOf(from, to).filter { it.isNotBlank() }.joinToString(" to ").ifBlank { "30d" }
+    }
+    val asString = optString("range")
+    return asString.ifBlank { "30d" }
 }
 
 private data class DesktopModuleLabels(

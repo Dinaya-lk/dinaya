@@ -296,6 +296,15 @@ data class LocationDetail(
     val isActive: Boolean = true,
 )
 
+data class LocationUpsertRequest(
+    val name: String,
+    val address: String? = null,
+    val timezone: String? = null,
+    val phone: String? = null,
+    val isActive: Boolean? = null,
+    val isDefault: Boolean? = null,
+)
+
 data class ReviewDetail(
     val id: String,
     val clientName: String,

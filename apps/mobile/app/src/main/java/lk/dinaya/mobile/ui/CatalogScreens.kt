@@ -50,6 +50,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -184,26 +185,25 @@ internal fun CatalogHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                action?.invoke()
-                OutlinedButton(
-                    onClick = onRefresh,
-                    enabled = !isLoading,
-                    shape = DinayaRadiusButton,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.height(36.dp),
-                ) {
-                    Text("Refresh", style = MaterialTheme.typography.labelMedium)
-                }
+            OutlinedButton(
+                onClick = onRefresh,
+                enabled = !isLoading,
+                shape = DinayaRadiusButton,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.height(48.dp),
+            ) {
+                Text("Refresh", style = MaterialTheme.typography.labelMedium)
             }
         }
-        OutlinedButton(
+        action?.invoke()
+        TextButton(
             onClick = onOpenWeb,
-            shape = DinayaRadiusButton,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier.fillMaxWidth().height(40.dp),
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+            modifier = Modifier.height(48.dp),
         ) {
-            Text("Open in web dashboard", style = MaterialTheme.typography.labelMedium)
+            Text("Open in web dashboard", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -442,6 +442,16 @@ internal fun CatalogClientsScreen(
 ) {
     val payload = moduleState?.payload
     var stage by remember { mutableStateOf("all") }
+    var sheetOpen by remember { mutableStateOf(false) }
+    val form = state.clientForm
+
+    LaunchedEffect(form.id, form.name, form.phone, form.email, form.stage) {
+        if (sheetOpen && form.id == null && form.name.isBlank() && form.phone.isBlank() &&
+            form.email.isBlank() && form.formError == null
+        ) {
+            sheetOpen = false
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         CatalogHeader(
@@ -450,6 +460,19 @@ internal fun CatalogClientsScreen(
             isLoading = moduleState?.isLoading == true || state.catalogBusy,
             onRefresh = onRefresh,
             onOpenWeb = onOpenWeb,
+            action = {
+                OutlinedButton(
+                    onClick = { viewModel.startClientCreate(); sheetOpen = true },
+                    shape = DinayaRadiusButton,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                ) {
+                    Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Add client", style = MaterialTheme.typography.labelLarge)
+                }
+            },
         )
         CatalogErrorBanner(state.catalogError, onDismiss = viewModel::clearCatalogError)
         CatalogNoticeBanner(state.catalogNotice)
@@ -471,7 +494,7 @@ internal fun CatalogClientsScreen(
             CatalogEmptyState(
                 title = "No clients found",
                 body = if (searchQuery.isNotBlank()) "No clients match \"$searchQuery\"."
-                else "When clients book your services, their CRM records will appear here.",
+                else "Add a client to keep their bookings and notes in one place.",
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -509,6 +532,17 @@ internal fun CatalogClientsScreen(
             onStageChange = { next -> viewModel.updateClientStage(client.id, next) },
             onDismiss = { viewModel.selectCatalogClient(null) },
             onOpenWeb = onOpenWeb,
+        )
+    }
+
+    if (sheetOpen) {
+        CatalogClientSheet(
+            form = form,
+            busy = state.catalogBusy,
+            isCreate = form.id == null,
+            onForm = viewModel::updateClientForm,
+            onSave = viewModel::saveClient,
+            onDismiss = { sheetOpen = false; viewModel.clearClientForm() },
         )
     }
 }
@@ -660,7 +694,7 @@ private fun CatalogClientDetailSheet(
                         onClick = { catalogDial(context, detailPhone) },
                         shape = DinayaRadiusButton,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier.weight(1f).height(44.dp),
+                        modifier = Modifier.weight(1f).height(48.dp),
                     ) {
                         Icon(imageVector = Icons.Filled.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
@@ -670,7 +704,7 @@ private fun CatalogClientDetailSheet(
                         onClick = { catalogWhatsApp(context, detailPhone, "Hi $detailName! Just following up from your recent visit.") },
                         shape = DinayaRadiusButton,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier.weight(1f).height(44.dp),
+                        modifier = Modifier.weight(1f).height(48.dp),
                     ) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.Chat, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
@@ -681,7 +715,7 @@ private fun CatalogClientDetailSheet(
                             onClick = { catalogEmail(context, detailEmail) },
                             shape = DinayaRadiusButton,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.weight(1f).height(44.dp),
+                            modifier = Modifier.weight(1f).height(48.dp),
                         ) {
                             Icon(imageVector = Icons.Filled.Email, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
@@ -800,7 +834,7 @@ private fun CatalogClientDetailSheet(
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                 ) {
                     if (busy) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
@@ -810,13 +844,85 @@ private fun CatalogClientDetailSheet(
                 }
             }
 
-            OutlinedButton(
+            TextButton(
                 onClick = onOpenWeb,
-                shape = DinayaRadiusButton,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.fillMaxWidth().height(44.dp),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
-                Text("View client in web dashboard", style = MaterialTheme.typography.labelLarge)
+                Text("View client in web dashboard", style = MaterialTheme.typography.labelSmall)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CatalogClientSheet(
+    form: ClientFormState,
+    busy: Boolean,
+    isCreate: Boolean,
+    onForm: (ClientFormState) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = DinayaRadiusSheet,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                text = if (isCreate) "New client" else "Edit client",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            CatalogErrorBanner(form.formError)
+            CatalogField(
+                label = "Name",
+                value = form.name,
+                onValueChange = { onForm(form.copy(name = it)) },
+                supportingError = if (form.name.isBlank() && form.formError != null) "Name is required." else null,
+            )
+            CatalogField(
+                label = "Phone",
+                value = form.phone,
+                onValueChange = { onForm(form.copy(phone = it)) },
+                keyboardType = KeyboardType.Phone,
+                supportingError = form.formError?.takeIf { it.contains("phone", ignoreCase = true) },
+            )
+            CatalogField(
+                label = "Email",
+                value = form.email,
+                onValueChange = { onForm(form.copy(email = it)) },
+                keyboardType = KeyboardType.Email,
+                supportingError = form.formError?.takeIf { it.contains("email", ignoreCase = true) },
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("STAGE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                CatalogChips(ClientStages.drop(1), form.stage.lowercase().ifBlank { "lead" }) { onForm(form.copy(stage = it)) }
+            }
+            Button(
+                onClick = onSave,
+                enabled = !busy,
+                shape = DinayaRadiusButton,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+            ) {
+                if (busy) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                } else {
+                    Text(if (isCreate) "Add client" else "Save client", fontWeight = FontWeight.SemiBold)
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -861,11 +967,11 @@ internal fun ServicesScreen(
                     shape = DinayaRadiusButton,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.height(36.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                 ) {
                     Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("New", style = MaterialTheme.typography.labelMedium)
+                    Text("Add service", style = MaterialTheme.typography.labelLarge)
                 }
             },
         )
@@ -884,7 +990,7 @@ internal fun ServicesScreen(
         if (moduleState?.isLoading == true && items.isEmpty()) {
             CatalogLoading()
         } else if (items.isEmpty()) {
-            CatalogEmptyState("No services yet", "Add services in the web dashboard — pricing and duration show up here.")
+            CatalogEmptyState("No services yet", "Add your first service — name, price, and duration.")
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items.forEach { item ->
@@ -1034,7 +1140,7 @@ private fun CatalogServiceSheet(
                 if (busy) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                 } else {
-                    Text(if (isCreate) "Continue in web dashboard" else "Save service", fontWeight = FontWeight.SemiBold)
+                    Text(if (isCreate) "Add service" else "Save service", fontWeight = FontWeight.SemiBold)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -1077,11 +1183,11 @@ internal fun StaffScreen(
                     shape = DinayaRadiusButton,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.height(36.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                 ) {
                     Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("New", style = MaterialTheme.typography.labelMedium)
+                    Text("Add staff member", style = MaterialTheme.typography.labelLarge)
                 }
             },
         )
@@ -1100,7 +1206,7 @@ internal fun StaffScreen(
         if (moduleState?.isLoading == true && items.isEmpty()) {
             CatalogLoading()
         } else if (items.isEmpty()) {
-            CatalogEmptyState("No staff yet", "Invite team members in the web dashboard — they show up here.")
+            CatalogEmptyState("No staff yet", "Add a team member to take bookings.")
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items.forEach { item ->
@@ -1230,7 +1336,7 @@ private fun CatalogStaffSheet(
                 if (busy) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                 } else {
-                    Text(if (isCreate) "Continue in web dashboard" else "Save staff member", fontWeight = FontWeight.SemiBold)
+                    Text(if (isCreate) "Add staff member" else "Save staff member", fontWeight = FontWeight.SemiBold)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -1266,6 +1372,22 @@ internal fun LocationsScreen(
             isLoading = moduleState?.isLoading == true || state.catalogBusy,
             onRefresh = onRefresh,
             onOpenWeb = onOpenWeb,
+            action = {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.startLocationCreate()
+                        sheetOpen = true
+                    },
+                    shape = DinayaRadiusButton,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                ) {
+                    Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Add location", style = MaterialTheme.typography.labelLarge)
+                }
+            },
         )
         CatalogErrorBanner(state.catalogError, onDismiss = viewModel::clearCatalogError)
         CatalogNoticeBanner(state.catalogNotice)
@@ -1279,7 +1401,7 @@ internal fun LocationsScreen(
         if (moduleState?.isLoading == true && items.isEmpty()) {
             CatalogLoading()
         } else if (items.isEmpty()) {
-            CatalogEmptyState("No locations yet", "Add your first branch in the web dashboard — it shows up here.")
+            CatalogEmptyState("No locations yet", "Add your first branch.")
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items.forEach { item ->
@@ -1289,10 +1411,11 @@ internal fun LocationsScreen(
         }
     }
 
-    if (sheetOpen && form.id != null) {
+    if (sheetOpen) {
         CatalogLocationSheet(
             form = form,
             busy = state.catalogBusy,
+            isCreate = form.id == null,
             onForm = viewModel::updateLocationForm,
             onSave = viewModel::saveLocation,
             onDismiss = { sheetOpen = false; viewModel.clearLocationForm() },
@@ -1356,6 +1479,7 @@ private fun CatalogLocationRow(item: ModuleItem, onEdit: () -> Unit) {
 private fun CatalogLocationSheet(
     form: LocationFormState,
     busy: Boolean,
+    isCreate: Boolean,
     onForm: (LocationFormState) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
@@ -1372,7 +1496,11 @@ private fun CatalogLocationSheet(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Edit location", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                if (isCreate) "New location" else "Edit location",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
             CatalogErrorBanner(form.formError)
             CatalogField(
                 label = "Name",
@@ -1405,7 +1533,7 @@ private fun CatalogLocationSheet(
                 if (busy) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                 } else {
-                    Text("Save location", fontWeight = FontWeight.SemiBold)
+                    Text(if (isCreate) "Add location" else "Save location", fontWeight = FontWeight.SemiBold)
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -1473,7 +1601,7 @@ internal fun AvailabilityScreen(
 
         if (effectiveMembers.isEmpty()) {
             if (moduleState?.isLoading == true) CatalogLoading()
-            else CatalogEmptyState("No availability yet", "Add staff and set weekly hours in the web dashboard.")
+            else CatalogEmptyState("No availability yet", "Add a team member first, then set weekly hours here.")
             return@Column
         }
 
@@ -1511,7 +1639,7 @@ internal fun AvailabilityScreen(
                             },
                             shape = DinayaRadiusButton,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.height(36.dp),
+                            modifier = Modifier.height(48.dp),
                         ) {
                             Text(if (editingWindows) "Done" else "Edit", style = MaterialTheme.typography.labelMedium)
                         }
@@ -1587,7 +1715,7 @@ internal fun AvailabilityScreen(
                             shape = DinayaRadiusButton,
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
                         ) {
                             Text("Save hours", fontWeight = FontWeight.SemiBold)
                         }
@@ -1622,7 +1750,7 @@ internal fun AvailabilityScreen(
                             onClick = { overrideFormOpen = !overrideFormOpen },
                             shape = DinayaRadiusButton,
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                            modifier = Modifier.height(36.dp),
+                            modifier = Modifier.height(48.dp),
                         ) {
                             Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -1779,7 +1907,7 @@ private fun AvailabilityOverrideForm(
             shape = DinayaRadiusButton,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
-            modifier = Modifier.fillMaxWidth().height(44.dp),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
         ) {
             Text("Save override", fontWeight = FontWeight.SemiBold)
         }

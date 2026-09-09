@@ -191,7 +191,93 @@ class DinayaApiClientTest {
     fun mobilePathAndDesktopPathBuildPrefixedRoutes() {
         assertEquals("/api/v1/mobile/bootstrap", mobilePath("bootstrap"))
         assertEquals("/api/v1/mobile/bookings/b_1", mobilePath("/bookings/b_1"))
+        assertEquals("/api/v1/mobile/auth/login", mobilePath("auth/login"))
         assertEquals("/api/v1/desktop/bootstrap", desktopPath("bootstrap"))
+    }
+
+    @Test
+    fun desktopFallbackForMapsMobileToDesktop() {
+        assertEquals(
+            "/api/v1/desktop/bookings?tab=today&limit=60",
+            desktopFallbackFor("/api/v1/mobile/bookings?tab=today&limit=60"),
+        )
+        assertEquals("/api/v1/desktop/overview", desktopFallbackFor("/api/v1/mobile/overview"))
+        assertEquals(
+            "/api/v1/desktop/auth/login",
+            desktopFallbackFor("/api/v1/mobile/auth/login"),
+        )
+    }
+
+    @Test
+    fun desktopFallbackForReturnsNullForNonMobilePaths() {
+        assertEquals(null, desktopFallbackFor("/api/v1/desktop/overview"))
+        assertEquals(null, desktopFallbackFor("/api/book/salon"))
+    }
+
+    @Test
+    fun toLoginResultPrefersMobileKey() {
+        val json = org.json.JSONObject(
+            """
+            {
+                "mobileKey": "mk_preferred",
+                "desktopKey": "dk_ignored",
+                "deviceKey": "vk_ignored",
+                "auth": { "keyId": "k_1", "keyType": "mobile", "deviceId": "d_1", "deviceName": "Pixel" },
+                "business": { "id": "b_1", "name": "Salon", "slug": "salon", "timezone": "Asia/Colombo", "plan": "pro" },
+                "user": { "id": "u_1", "name": "Nimal", "email": "nimal@example.com", "role": "owner" }
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals("mk_preferred", json.toLoginResult().deviceKey)
+    }
+
+    @Test
+    fun toLoginResultWithOnlyMobileKey() {
+        val json = org.json.JSONObject(
+            """
+            {
+                "mobileKey": "mk_only",
+                "auth": { "keyId": "k_1", "keyType": "mobile", "deviceId": "d_1", "deviceName": "Pixel" },
+                "business": { "id": "b_1", "name": "Salon", "slug": "salon" },
+                "user": { "id": "u_1", "name": "Nimal", "email": "nimal@example.com", "role": "owner" }
+            }
+            """.trimIndent(),
+        )
+
+        val result = json.toLoginResult()
+        assertEquals("mk_only", result.deviceKey)
+        assertEquals("k_1", result.auth.keyId)
+        assertEquals("Salon", result.business.name)
+        assertEquals("nimal@example.com", result.user.email)
+    }
+
+    @Test
+    fun toLoginResultFallsBackToDesktopKeyThenDeviceKey() {
+        val desktopOnly = org.json.JSONObject(
+            """
+            {
+                "desktopKey": "dk_fallback",
+                "deviceKey": "vk_ignored",
+                "auth": { "keyId": "k_1", "keyType": "desktop", "deviceId": "d_1", "deviceName": "Mac" },
+                "business": { "id": "b_1", "name": "Salon", "slug": "salon" },
+                "user": { "id": "u_1", "name": "Nimal", "email": "nimal@example.com", "role": "owner" }
+            }
+            """.trimIndent(),
+        )
+        assertEquals("dk_fallback", desktopOnly.toLoginResult().deviceKey)
+
+        val deviceOnly = org.json.JSONObject(
+            """
+            {
+                "deviceKey": "vk_last",
+                "auth": { "keyId": "k_1", "keyType": "mobile", "deviceId": "d_1", "deviceName": "Pixel" },
+                "business": { "id": "b_1", "name": "Salon", "slug": "salon" },
+                "user": { "id": "u_1", "name": "Nimal", "email": "nimal@example.com", "role": "owner" }
+            }
+            """.trimIndent(),
+        )
+        assertEquals("vk_last", deviceOnly.toLoginResult().deviceKey)
     }
 
     @Test
@@ -278,6 +364,37 @@ class DinayaApiClientTest {
         assertEquals("Called back", body.getString("notes"))
         assertEquals(false, body.has("clientName"))
         assertEquals(false, body.has("startsAt"))
+    }
+
+    @Test
+    fun locationUpsertRequestSerializesRequiredAndOptionalFields() {
+        val body = LocationUpsertRequest(
+            name = "Colombo Branch",
+            address = "Galle Road",
+            timezone = "Asia/Colombo",
+            phone = "+94112345678",
+            isActive = true,
+            isDefault = true,
+        ).toJson()
+
+        assertEquals("Colombo Branch", body.getString("name"))
+        assertEquals("Galle Road", body.getString("address"))
+        assertEquals("Asia/Colombo", body.getString("timezone"))
+        assertEquals("+94112345678", body.getString("phone"))
+        assertEquals(true, body.getBoolean("isActive"))
+        assertEquals(true, body.getBoolean("isDefault"))
+    }
+
+    @Test
+    fun locationUpsertRequestOmitsBlankOptionals() {
+        val body = LocationUpsertRequest(name = "Kandy").toJson()
+
+        assertEquals("Kandy", body.getString("name"))
+        assertEquals(false, body.has("address"))
+        assertEquals(false, body.has("timezone"))
+        assertEquals(false, body.has("phone"))
+        assertEquals(false, body.has("isActive"))
+        assertEquals(false, body.has("isDefault"))
     }
 
     @Test
@@ -408,6 +525,26 @@ class DinayaApiClientTest {
         assertEquals(1, reports.metrics.size)
         assertEquals("Revenue", reports.metrics[0].label)
         assertEquals("/dashboard/reports", reports.webPath)
+    }
+
+    @Test
+    fun toReportPayloadFlattensTypedDesktopMetricsObject() {
+        val json = org.json.JSONObject("""
+            {
+                "range": { "from": "2026-09-03", "to": "2026-09-09" },
+                "metrics": {
+                    "totalRevenueLabel": "LKR 12,500",
+                    "totalBookings": 9,
+                    "newClients": 3
+                },
+                "webUrl": "/dashboard/reports"
+            }
+        """.trimIndent())
+
+        val reports = json.toReportPayload()
+        assertEquals("2026-09-03 to 2026-09-09", reports.range)
+        assertEquals(3, reports.metrics.size)
+        assertEquals("LKR 12,500", reports.metrics.first { it.label == "Total Revenue Label" }.value)
     }
 
     @Test

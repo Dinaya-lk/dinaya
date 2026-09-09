@@ -58,6 +58,31 @@ class CatalogValidationTest {
     }
 
     @Test
+    fun clientFormRequiresNamePhoneAndValidEmail() {
+        assertEquals("Client name is required.", validateClientForm(ClientFormState(name = "")))
+        assertEquals(
+            "Phone number is required.",
+            validateClientForm(ClientFormState(name = "Nimal", phone = "")),
+        )
+        assertEquals(
+            "Enter a valid phone number.",
+            validateClientForm(ClientFormState(name = "Nimal", phone = "12")),
+        )
+        assertEquals(
+            "Enter a valid email or leave it blank.",
+            validateClientForm(
+                ClientFormState(name = "Nimal", phone = "+94771234567", email = "not-an-email"),
+            ),
+        )
+        assertNull(validateClientForm(ClientFormState(name = "Nimal", phone = "+94771234567")))
+        assertNull(
+            validateClientForm(
+                ClientFormState(name = "Nimal", phone = "+94771234567", email = "nimal@salon.lk"),
+            ),
+        )
+    }
+
+    @Test
     fun subtitleParsersExtractPriceDurationAndTimezone() {
         assertEquals("3500", parsePriceFromSubtitle("Rs. 3,500 · 45 min"))
         assertEquals("45", parseDurationFromSubtitle("Rs. 3,500 · 45 min"))

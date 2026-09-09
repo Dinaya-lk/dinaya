@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const range = normalizeReportsRange({
     from: searchParams.get("from"),
+    preset: searchParams.get("range"),
     to: searchParams.get("to"),
   });
 

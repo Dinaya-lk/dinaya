@@ -16,11 +16,16 @@ import lk.dinaya.mobile.data.AvailabilityWindow
 import lk.dinaya.mobile.data.BookingSummary
 import lk.dinaya.mobile.data.BootstrapResult
 import lk.dinaya.mobile.data.ClientDetailPayload
+import lk.dinaya.mobile.data.ClientUpsertRequest
 import lk.dinaya.mobile.data.CreateBookingRequest
 import lk.dinaya.mobile.data.DinayaApiClient
 import lk.dinaya.mobile.data.DesktopModulePayload
+import lk.dinaya.mobile.data.LocationUpsertRequest
 import lk.dinaya.mobile.data.MobileCache
 import lk.dinaya.mobile.data.ModuleItem
+import lk.dinaya.mobile.data.ModuleMetric
+import lk.dinaya.mobile.data.ServiceUpsertRequest
+import lk.dinaya.mobile.data.StaffUpsertRequest
 import lk.dinaya.mobile.data.StoredSession
 import lk.dinaya.mobile.data.combineDateTimeToIso
 
@@ -65,6 +70,16 @@ data class LocationFormState(
     val formError: String? = null,
 )
 
+data class ClientFormState(
+    val id: String? = null,
+    val name: String = "",
+    val phone: String = "",
+    val email: String = "",
+    val stage: String = "",
+    val source: String = "",
+    val formError: String? = null,
+)
+
 /** Light phone check: allow +, spaces, dashes — require 7+ digits. */
 internal fun isValidPhoneLight(phone: String): Boolean {
     if (phone.isBlank()) return true
@@ -97,6 +112,14 @@ internal fun validateStaffForm(form: StaffFormState): String? {
 internal fun validateLocationForm(form: LocationFormState): String? {
     if (form.name.isBlank()) return "Location name is required."
     if (form.timezone.isBlank()) return "Timezone is required."
+    return null
+}
+
+internal fun validateClientForm(form: ClientFormState): String? {
+    if (form.name.isBlank()) return "Client name is required."
+    if (form.phone.isBlank()) return "Phone number is required."
+    if (!isValidPhoneLight(form.phone)) return "Enter a valid phone number."
+    if (form.email.isNotBlank() && !form.email.contains("@")) return "Enter a valid email or leave it blank."
     return null
 }
 
@@ -146,6 +169,7 @@ data class DinayaUiState(
     val serviceForm: ServiceFormState = ServiceFormState(),
     val staffForm: StaffFormState = StaffFormState(),
     val locationForm: LocationFormState = LocationFormState(),
+    val clientForm: ClientFormState = ClientFormState(),
     val availabilityMembers: List<AvailabilityMember> = emptyList(),
     val availabilityEdits: Map<String, List<AvailabilityWindow>> = emptyMap(),
     val catalogBusy: Boolean = false,
@@ -401,6 +425,7 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
                         serviceForm = ServiceFormState(),
                         staffForm = StaffFormState(),
                         locationForm = LocationFormState(),
+                        clientForm = ClientFormState(),
                         availabilityMembers = emptyList(),
                         availabilityEdits = emptyMap(),
                         catalogBusy = false,
@@ -882,6 +907,51 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun startClientCreate() {
+        _uiState.update { it.copy(clientForm = ClientFormState()) }
+    }
+
+    fun updateClientForm(form: ClientFormState) {
+        _uiState.update { it.copy(clientForm = form.copy(formError = null)) }
+    }
+
+    fun clearClientForm() {
+        _uiState.update { it.copy(clientForm = ClientFormState()) }
+    }
+
+    fun saveClient() {
+        val form = uiState.value.clientForm
+        validateClientForm(form)?.let { message ->
+            _uiState.update { it.copy(clientForm = form.copy(formError = message)) }
+            return
+        }
+        val request = ClientUpsertRequest(
+            name = form.name.trim(),
+            phone = form.phone.trim(),
+            email = form.email.trim().ifBlank { null },
+            stage = form.stage.trim().ifBlank { null },
+            source = form.source.trim().ifBlank { null },
+        )
+        val id = form.id
+        if (id == null) {
+            runCatalogMutation(
+                errorFallback = "Could not add the client.",
+                successNotice = "Client added.",
+            ) { api, deviceKey ->
+                api.createClient(deviceKey, request)
+                _uiState.update { it.copy(clientForm = ClientFormState()) }
+            }
+            return
+        }
+        runCatalogMutation(
+            errorFallback = "Could not save the client.",
+            successNotice = "Client saved.",
+        ) { api, deviceKey ->
+            api.updateClient(deviceKey, id, request)
+            _uiState.update { it.copy(clientForm = ClientFormState()) }
+        }
+    }
+
     // ——— Catalog: services ——————————————————————————————————————————————
     fun startServiceCreate() {
         _uiState.update { it.copy(serviceForm = ServiceFormState()) }
@@ -942,24 +1012,34 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
         val id = form.id
+        val priceLkr = form.priceLkr.trim().replace(",", "").toDoubleOrNull()?.toInt()
+        val description = form.description.trim().ifBlank { null }
         if (id == null) {
-            // No dedicated create endpoint on desktop API yet — create via web
-            // dashboard; surface inline so the user knows where to finish.
-            _uiState.update {
-                it.copy(
-                    serviceForm = form.copy(
-                        formError = "New services are created in the web dashboard — open web to finish setup.",
+            val durationMinutes = form.durationMinutes.trim().toIntOrNull() ?: 30
+            runCatalogMutation(
+                errorFallback = "Could not create the service.",
+                successNotice = "Service created.",
+            ) { api, deviceKey ->
+                api.createService(
+                    deviceKey,
+                    ServiceUpsertRequest(
+                        name = form.name.trim(),
+                        description = description,
+                        priceLkr = priceLkr,
+                        durationMinutes = durationMinutes,
+                        isActive = form.isActive,
                     ),
                 )
+                _uiState.update { it.copy(serviceForm = ServiceFormState()) }
             }
             return
         }
         val body = JSONObject()
             .put("name", form.name.trim())
             .put("isActive", form.isActive)
-        form.priceLkr.trim().replace(",", "").toDoubleOrNull()?.let { body.put("priceLkr", it.toInt()) }
+        priceLkr?.let { body.put("priceLkr", it) }
         form.durationMinutes.trim().toIntOrNull()?.let { body.put("durationMinutes", it) }
-        if (form.description.isNotBlank()) body.put("description", form.description.trim())
+        if (description != null) body.put("description", description)
         runCatalogMutation(
             errorFallback = "Could not save the service.",
             successNotice = "Service saved.",
@@ -1030,21 +1110,31 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
         val id = form.id
+        val email = form.email.trim().ifBlank { null }
+        val phone = form.phone.trim().ifBlank { null }
         if (id == null) {
-            _uiState.update {
-                it.copy(
-                    staffForm = form.copy(
-                        formError = "New staff members are invited in the web dashboard — open web to finish setup.",
+            runCatalogMutation(
+                errorFallback = "Could not add the staff member.",
+                successNotice = "Staff member added.",
+            ) { api, deviceKey ->
+                api.createStaff(
+                    deviceKey,
+                    StaffUpsertRequest(
+                        name = form.name.trim(),
+                        email = email,
+                        phone = phone,
+                        isActive = form.isActive,
                     ),
                 )
+                _uiState.update { it.copy(staffForm = StaffFormState()) }
             }
             return
         }
         val body = JSONObject()
             .put("name", form.name.trim())
             .put("isActive", form.isActive)
-        if (form.email.isNotBlank()) body.put("email", form.email.trim())
-        if (form.phone.isNotBlank()) body.put("phone", form.phone.trim())
+        if (email != null) body.put("email", email)
+        if (phone != null) body.put("phone", phone)
         runCatalogMutation(
             errorFallback = "Could not save the staff member.",
             successNotice = "Staff member saved.",
@@ -1055,6 +1145,10 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // ——— Catalog: locations —————————————————————————————————————————————
+    fun startLocationCreate() {
+        _uiState.update { it.copy(locationForm = LocationFormState()) }
+    }
+
     fun startLocationEdit(item: ModuleItem) {
         _uiState.update {
             it.copy(
@@ -1083,17 +1177,29 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
             _uiState.update { it.copy(locationForm = form.copy(formError = message)) }
             return
         }
-        val id = form.id ?: return
-        val body = JSONObject()
-            .put("name", form.name.trim())
-            .put("timezone", form.timezone.trim())
-        if (form.address.isNotBlank()) body.put("address", form.address.trim())
-        if (form.isDefault) body.put("isDefault", true)
+        val timezone = form.timezone.trim().ifBlank { "Asia/Colombo" }
+        val request = LocationUpsertRequest(
+            name = form.name.trim(),
+            address = form.address.trim().ifBlank { null },
+            timezone = timezone,
+            isDefault = form.isDefault,
+        )
+        val id = form.id
+        if (id == null) {
+            runCatalogMutation(
+                errorFallback = "Could not add the location.",
+                successNotice = "Location added.",
+            ) { api, deviceKey ->
+                api.createLocation(deviceKey, request)
+                _uiState.update { it.copy(locationForm = LocationFormState()) }
+            }
+            return
+        }
         runCatalogMutation(
             errorFallback = "Could not save the location.",
             successNotice = "Location saved.",
         ) { api, deviceKey ->
-            api.updateLocation(deviceKey, id, body)
+            api.updateLocation(deviceKey, id, request)
             _uiState.update { it.copy(locationForm = LocationFormState()) }
         }
     }
@@ -1209,11 +1315,21 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun toggleDeal(dealId: String, isActive: Boolean) {
-        // Desktop deals API is read-only; keep toggle local-first and refresh
-        // on next sync so the list never blocks on a missing PATCH endpoint.
+        val session = uiState.value.session ?: return
         updateLocalModuleItemStatus("deals", dealId, if (isActive) "active" else "paused")
-        _uiState.update {
-            it.copy(actionMessage = if (isActive) "Deal activated on this device." else "Deal paused on this device.")
+        viewModelScope.launch {
+            runCatching {
+                newClient(session.baseUrl).patchDealActive(session.deviceKey, dealId, isActive)
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(actionMessage = if (isActive) "Deal activated." else "Deal paused.")
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(errorMessage = error.message ?: "Could not update deal.")
+                }
+                loadSectionModule("deals", force = true)
+            }
         }
     }
 
@@ -1273,11 +1389,109 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
             _uiState.update { it.copy(errorMessage = "Enter a phone number for the test send.") }
             return
         }
+        val session = uiState.value.session ?: return
         _uiState.update {
-            it.copy(
-                broadcastTestSent = it.broadcastTestSent + (broadcastId to trimmed),
-                actionMessage = "Test send queued to $trimmed.",
-            )
+            it.copy(broadcastTestSent = it.broadcastTestSent + (broadcastId to trimmed))
+        }
+        viewModelScope.launch {
+            runCatching {
+                newClient(session.baseUrl).sendTestBroadcast(session.deviceKey, broadcastId, trimmed)
+            }.onSuccess { result ->
+                _uiState.update {
+                    it.copy(actionMessage = "Test send ${result.status.ifBlank { "queued" }}.")
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(errorMessage = error.message ?: "Could not send test broadcast.")
+                }
+            }
+        }
+    }
+
+    fun triggerBroadcast(broadcastId: String) {
+        val session = uiState.value.session ?: return
+        viewModelScope.launch {
+            runCatching {
+                newClient(session.baseUrl).triggerBroadcast(session.deviceKey, broadcastId)
+            }.onSuccess { result ->
+                _uiState.update {
+                    it.copy(actionMessage = "Broadcast ${result.status.ifBlank { "queued" }}.")
+                }
+                loadSectionModule("broadcasts", force = true)
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(errorMessage = error.message ?: "Could not send the broadcast.")
+                }
+            }
+        }
+    }
+
+    fun selectReportsRange(range: String) {
+        val session = uiState.value.session ?: return
+        val existing = uiState.value.moduleContent["reports"]
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    moduleContent = it.moduleContent + (
+                        "reports" to ModuleContentState(
+                            isLoading = true,
+                            payload = existing?.payload,
+                        )
+                    ),
+                )
+            }
+            runCatching {
+                newClient(session.baseUrl).fetchReports(session.deviceKey, range = range)
+            }.onSuccess { reports ->
+                val metrics = reports.metrics.map { metric ->
+                    ModuleMetric(
+                        label = metric.label,
+                        value = metric.value,
+                        detail = null,
+                        tone = null,
+                    )
+                }
+                val items = reports.metrics.mapIndexed { index, metric ->
+                    ModuleItem(
+                        id = "reports-${reports.range}-$index",
+                        title = metric.label,
+                        subtitle = metric.value,
+                        meta = reports.range,
+                        status = null,
+                    )
+                }
+                _uiState.update {
+                    it.copy(
+                        moduleContent = it.moduleContent + (
+                            "reports" to ModuleContentState(
+                                payload = DesktopModulePayload(
+                                    emptyState = existing?.payload?.emptyState ?: "No metrics in range",
+                                    items = items,
+                                    metrics = metrics,
+                                    module = "reports",
+                                    refreshedAt = reports.serverTime,
+                                    summary = existing?.payload?.summary ?: "Operating metrics and revenue snapshots.",
+                                    title = existing?.payload?.title ?: "Reports",
+                                    webPath = reports.webPath.ifBlank {
+                                        existing?.payload?.webPath ?: "/dashboard/reports"
+                                    },
+                                ),
+                            )
+                        ),
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        moduleContent = it.moduleContent + (
+                            "reports" to ModuleContentState(
+                                errorMessage = error.message ?: "Could not load reports.",
+                                payload = existing?.payload,
+                            )
+                        ),
+                    )
+                }
+            }
         }
     }
 

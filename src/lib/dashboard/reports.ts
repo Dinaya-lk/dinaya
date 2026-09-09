@@ -10,6 +10,9 @@ export type DashboardReportsRange = {
   to: string;
 };
 
+export const REPORT_RANGE_PRESETS = ["7d", "30d", "90d"] as const;
+export type ReportRangePreset = (typeof REPORT_RANGE_PRESETS)[number];
+
 export type DashboardReportsOverview = Awaited<ReturnType<typeof getReportsDashboardOverview>>;
 
 function ymd(value: Date): string {
@@ -27,9 +30,41 @@ function parseDateInput(value: string | null | undefined): string | null {
   return value;
 }
 
+export function parseReportRangePreset(raw: string | null | undefined): ReportRangePreset | null {
+  switch ((raw ?? "").trim().toLowerCase()) {
+    case "7":
+    case "7d":
+      return "7d";
+    case "30":
+    case "30d":
+      return "30d";
+    case "90":
+    case "90d":
+      return "90d";
+    default:
+      return null;
+  }
+}
+
+function presetDayCount(preset: ReportRangePreset): number {
+  switch (preset) {
+    case "7d":
+      return 7;
+    case "30d":
+      return 30;
+    case "90d":
+      return 90;
+    default: {
+      const _never: never = preset;
+      return _never;
+    }
+  }
+}
+
 export function normalizeReportsRange(input: {
   from?: string | null;
   now?: Date;
+  preset?: string | null;
   timezone?: string;
   to?: string | null;
 }): DashboardReportsRange {
@@ -37,7 +72,9 @@ export function normalizeReportsRange(input: {
   const now = input.now ?? new Date();
   const localNow = toZonedTime(now, timezone);
   const defaultTo = ymd(localNow);
-  const defaultFrom = ymd(subDays(localNow, 29));
+  const preset = parseReportRangePreset(input.preset);
+  const lookbackDays = (preset ? presetDayCount(preset) : 30) - 1;
+  const defaultFrom = ymd(subDays(localNow, lookbackDays));
   const from = parseDateInput(input.from) ?? defaultFrom;
   const to = parseDateInput(input.to) ?? defaultTo;
 
