@@ -565,4 +565,181 @@ class DinayaApiClientTest {
             MobileCache.calendarKey("day", "2026-09-04", "s_1"),
         )
     }
+
+    @Test
+    fun combineDateTimeToIsoAppendsSeconds() {
+        assertEquals("2026-09-04T10:30:00", combineDateTimeToIso("2026-09-04", "10:30"))
+        assertEquals("2026-09-04T09:00:00", combineDateTimeToIso("2026-09-04", ""))
+        assertEquals("", combineDateTimeToIso("", "10:30"))
+    }
+
+    @Test
+    fun normalizeIsoDateTimeAppendsSecondsAndPreservesZ() {
+        assertEquals("2026-09-04T10:30:00", normalizeIsoDateTime("2026-09-04T10:30"))
+        assertEquals("2026-09-04T10:30:00Z", normalizeIsoDateTime("2026-09-04T10:30Z"))
+        assertEquals("2026-09-04T09:00:00", normalizeIsoDateTime("2026-09-04"))
+        assertEquals("2026-09-04T10:30:00.000Z", normalizeIsoDateTime("2026-09-04T10:30:00.000Z"))
+    }
+
+    @Test
+    fun createDealRequestSerializesRequiredFields() {
+        val body = CreateDealRequest(
+            serviceId = "svc_1",
+            locationId = "loc_1",
+            discountPercent = 20,
+            slotsTotal = 5,
+            dealWindowStart = "2026-09-04T09:00",
+            dealWindowEnd = "2026-09-05T18:00",
+            apptWindowStart = "2026-09-06T09:00",
+            apptWindowEnd = "2026-09-07T17:00",
+        ).toJson()
+
+        assertEquals("svc_1", body.getString("serviceId"))
+        assertEquals("loc_1", body.getString("locationId"))
+        assertEquals(20, body.getInt("discountPercent"))
+        assertEquals(5, body.getInt("slotsTotal"))
+        assertEquals("2026-09-04T09:00:00", body.getString("dealWindowStart"))
+        assertEquals("2026-09-05T18:00:00", body.getString("dealWindowEnd"))
+        assertEquals("2026-09-06T09:00:00", body.getString("apptWindowStart"))
+        assertEquals("2026-09-07T17:00:00", body.getString("apptWindowEnd"))
+        assertEquals(false, body.getBoolean("notifyClients"))
+        assertEquals(false, body.has("staffId"))
+    }
+
+    @Test
+    fun createDealRequestSerializesOptionalStaffAndNotify() {
+        val body = CreateDealRequest(
+            serviceId = "svc_1",
+            locationId = "loc_1",
+            staffId = "st_1",
+            discountPercent = 15,
+            slotsTotal = 3,
+            dealWindowStart = "2026-09-04T09:00:00Z",
+            dealWindowEnd = "2026-09-05T18:00:00Z",
+            apptWindowStart = "2026-09-06T09:00:00Z",
+            apptWindowEnd = "2026-09-07T17:00:00Z",
+            notifyClients = true,
+        ).toJson()
+
+        assertEquals("st_1", body.getString("staffId"))
+        assertEquals(true, body.getBoolean("notifyClients"))
+        assertEquals("2026-09-04T09:00:00Z", body.getString("dealWindowStart"))
+    }
+
+    @Test
+    fun createBroadcastRequestSerializesRequiredFields() {
+        val body = CreateBroadcastRequest(
+            name = "September offer",
+            channel = "WhatsApp",
+            body = "Book this week and save.",
+        ).toJson()
+
+        assertEquals("September offer", body.getString("name"))
+        assertEquals("whatsapp", body.getString("channel"))
+        assertEquals("Book this week and save.", body.getString("body"))
+        assertEquals("all", body.getString("audienceType"))
+        assertEquals(false, body.getBoolean("sendNow"))
+        assertEquals(false, body.has("subject"))
+        assertEquals(false, body.has("audienceFilter"))
+    }
+
+    @Test
+    fun createBroadcastRequestSerializesStageAudienceFilter() {
+        val body = CreateBroadcastRequest(
+            name = "VIP",
+            channel = "sms",
+            body = "Hello",
+            subject = "This week",
+            audienceType = "stage",
+            audienceStage = "active",
+            sendNow = true,
+        ).toJson()
+
+        assertEquals("This week", body.getString("subject"))
+        assertEquals("stage", body.getString("audienceType"))
+        assertEquals(true, body.getBoolean("sendNow"))
+        assertEquals("active", body.getJSONObject("audienceFilter").getString("stage"))
+    }
+
+    @Test
+    fun createBroadcastRequestSerializesTagsAudienceFilter() {
+        val body = CreateBroadcastRequest(
+            name = "VIP",
+            channel = "email",
+            body = "Hello",
+            audienceType = "tags",
+            audienceTags = listOf("vip", "regular"),
+        ).toJson()
+
+        val tags = body.getJSONObject("audienceFilter").getJSONArray("tags")
+        assertEquals(2, tags.length())
+        assertEquals("vip", tags.getString(0))
+        assertEquals("regular", tags.getString(1))
+    }
+
+    @Test
+    fun toDealDetailParsesFlatCreateResponse() {
+        val json = org.json.JSONObject("""{ "id": "deal_1", "notified": 4 }""")
+        val deal = json.toDealDetail()
+        assertEquals("deal_1", deal.id)
+        assertEquals(4, deal.notified)
+        assertEquals("active", deal.status)
+    }
+
+    @Test
+    fun toDealDetailUnwrapsNestedDeal() {
+        val json = org.json.JSONObject(
+            """
+            {
+                "deal": {
+                    "id": "deal_2",
+                    "serviceId": "svc_1",
+                    "locationId": "loc_1",
+                    "staffId": "st_1",
+                    "discountPercent": 20,
+                    "slotsTotal": 5,
+                    "slotsRedeemed": 1,
+                    "status": "upcoming",
+                    "serviceName": "Haircut",
+                    "locationName": "Kandy"
+                }
+            }
+            """.trimIndent(),
+        )
+        val deal = json.toDealDetail()
+        assertEquals("deal_2", deal.id)
+        assertEquals("svc_1", deal.serviceId)
+        assertEquals("st_1", deal.staffId)
+        assertEquals(20, deal.discountPercent)
+        assertEquals(5, deal.slotsTotal)
+        assertEquals("upcoming", deal.status)
+        assertEquals("Haircut", deal.serviceName)
+    }
+
+    @Test
+    fun toBroadcastCreateResultParsesNestedBroadcast() {
+        val json = org.json.JSONObject(
+            """{ "broadcast": { "id": "bc_1", "name": "September offer", "status": "draft" } }""",
+        )
+        val result = json.toBroadcastCreateResult()
+        assertEquals("bc_1", result.id)
+        assertEquals("draft", result.status)
+        assertEquals("September offer", result.name)
+    }
+
+    @Test
+    fun toBroadcastCreateResultParsesTopLevelId() {
+        val json = org.json.JSONObject("""{ "id": "bc_2", "status": "sending" }""")
+        val result = json.toBroadcastCreateResult()
+        assertEquals("bc_2", result.id)
+        assertEquals("sending", result.status)
+    }
+
+    @Test
+    fun updateBookingRequestSerializesStartsAt() {
+        val body = UpdateBookingRequest(startsAt = "2026-09-04T11:00:00").toJson()
+        assertEquals("2026-09-04T11:00:00", body.getString("startsAt"))
+        assertEquals(false, body.has("status"))
+        assertEquals(false, body.has("clientName"))
+    }
 }

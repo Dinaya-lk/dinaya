@@ -334,6 +334,54 @@ data class BroadcastResult(
     val channel: String = "",
 )
 
+data class CreateDealRequest(
+    val serviceId: String,
+    val locationId: String,
+    val staffId: String? = null,
+    val discountPercent: Int,
+    val slotsTotal: Int,
+    val dealWindowStart: String,
+    val dealWindowEnd: String,
+    val apptWindowStart: String,
+    val apptWindowEnd: String,
+    val notifyClients: Boolean = false,
+)
+
+data class DealDetail(
+    val id: String,
+    val serviceId: String = "",
+    val locationId: String = "",
+    val staffId: String? = null,
+    val discountPercent: Int = 0,
+    val slotsTotal: Int = 0,
+    val slotsRedeemed: Int = 0,
+    val dealWindowStart: String = "",
+    val dealWindowEnd: String = "",
+    val apptWindowStart: String = "",
+    val apptWindowEnd: String = "",
+    val status: String = "",
+    val serviceName: String = "",
+    val locationName: String = "",
+    val notified: Int? = null,
+)
+
+data class CreateBroadcastRequest(
+    val name: String,
+    val channel: String,
+    val body: String,
+    val subject: String? = null,
+    val audienceType: String = "all",
+    val audienceStage: String? = null,
+    val audienceTags: List<String>? = null,
+    val sendNow: Boolean = false,
+)
+
+data class BroadcastCreateResult(
+    val id: String,
+    val status: String = "draft",
+    val name: String = "",
+)
+
 data class AutomationToggleResult(
     val id: String,
     val isActive: Boolean,

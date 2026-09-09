@@ -1,9 +1,11 @@
 package lk.dinaya.mobile.ui
 
 import android.app.Application
+import android.content.Context
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +20,8 @@ import lk.dinaya.mobile.data.BootstrapResult
 import lk.dinaya.mobile.data.ClientDetailPayload
 import lk.dinaya.mobile.data.ClientUpsertRequest
 import lk.dinaya.mobile.data.CreateBookingRequest
+import lk.dinaya.mobile.data.CreateBroadcastRequest
+import lk.dinaya.mobile.data.CreateDealRequest
 import lk.dinaya.mobile.data.DinayaApiClient
 import lk.dinaya.mobile.data.DesktopModulePayload
 import lk.dinaya.mobile.data.LocationUpsertRequest
@@ -27,9 +31,8 @@ import lk.dinaya.mobile.data.ModuleMetric
 import lk.dinaya.mobile.data.ServiceUpsertRequest
 import lk.dinaya.mobile.data.StaffUpsertRequest
 import lk.dinaya.mobile.data.StoredSession
+import lk.dinaya.mobile.data.UpdateBookingRequest
 import lk.dinaya.mobile.data.combineDateTimeToIso
-
-import android.content.Context
 import lk.dinaya.mobile.data.CalendarPayload
 import lk.dinaya.mobile.data.OverviewPayload
 import lk.dinaya.mobile.data.ThemePreference
@@ -123,6 +126,58 @@ internal fun validateClientForm(form: ClientFormState): String? {
     return null
 }
 
+internal fun validateDealCreate(
+    serviceId: String,
+    locationId: String,
+    discountPercent: Int,
+    slotsTotal: Int,
+    dealWindowStart: String,
+    dealWindowEnd: String,
+    apptWindowStart: String,
+    apptWindowEnd: String,
+): String? {
+    if (serviceId.isBlank()) return "Choose a service."
+    if (locationId.isBlank()) return "Choose a location."
+    if (discountPercent !in 10..50) return "Discount must be between 10% and 50%."
+    if (slotsTotal !in 1..20) return "Slots must be between 1 and 20."
+    if (dealWindowStart.isBlank() || dealWindowEnd.isBlank()) return "Set the deal window."
+    if (apptWindowStart.isBlank() || apptWindowEnd.isBlank()) return "Set the appointment window."
+    return null
+}
+
+internal fun validateBroadcastCreate(
+    name: String,
+    channel: String,
+    body: String,
+    audienceType: String,
+    audienceStage: String?,
+): String? {
+    if (name.isBlank()) return "Broadcast name is required."
+    val normalizedChannel = channel.trim().lowercase()
+    if (normalizedChannel !in setOf("whatsapp", "sms", "email")) {
+        return "Choose WhatsApp, SMS, or email."
+    }
+    if (body.isBlank()) return "Message body is required."
+    val normalizedAudience = audienceType.trim().lowercase().ifBlank { "all" }
+    if (normalizedAudience !in setOf("all", "stage", "tags")) {
+        return "Choose an audience."
+    }
+    if (normalizedAudience == "stage" && audienceStage.isNullOrBlank()) {
+        return "Choose a client stage for this broadcast."
+    }
+    return null
+}
+
+internal fun parseBookingDate(startsAt: String): String {
+    return Regex("""(\d{4}-\d{2}-\d{2})""").find(startsAt.trim())?.groupValues?.get(1).orEmpty()
+}
+
+internal fun parseBookingTime(startsAt: String): String {
+    val trimmed = startsAt.trim()
+    Regex("""[T\s](\d{2}:\d{2})""").find(trimmed)?.groupValues?.get(1)?.let { return it }
+    return Regex("""^(\d{2}:\d{2})""").find(trimmed)?.groupValues?.get(1).orEmpty()
+}
+
 data class DinayaUiState(
     val baseUrl: String = if (BuildConfig.DEBUG) "http://127.0.0.1:3002" else BuildConfig.DINAYA_API_BASE_URL,
     val email: String = "",
@@ -158,6 +213,12 @@ data class DinayaUiState(
     val draftTime: String = "",
     val draftNotes: String = "",
     val cancelReason: String = "",
+    val showRescheduleSheet: Boolean = false,
+    val rescheduleBookingId: String? = null,
+    val rescheduleDate: String = "",
+    val rescheduleTime: String = "",
+    val rescheduleError: String? = null,
+    val isRescheduling: Boolean = false,
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
     val lastSyncedAt: String? = null,
     val selectedSectionKey: String = "overview",
@@ -417,6 +478,12 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
                         draftTime = "",
                         draftNotes = "",
                         cancelReason = "",
+                        showRescheduleSheet = false,
+                        rescheduleBookingId = null,
+                        rescheduleDate = "",
+                        rescheduleTime = "",
+                        rescheduleError = null,
+                        isRescheduling = false,
                         selectedSectionKey = "overview",
                         moduleContent = emptyMap(),
                         selectedClient = null,
@@ -540,6 +607,12 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         loadSectionModule("services", force = false)
     }
 
+    /** Lazily loads locations for deal create and other catalog pickers. */
+    fun ensureLocationsModule() {
+        if (uiState.value.moduleContent["locations"]?.payload != null) return
+        loadSectionModule("locations", force = false)
+    }
+
     private fun loadSectionModule(sectionKey: String, force: Boolean) {
         val session = uiState.value.session ?: return
         val section = dashboardSectionByKey(sectionKey)
@@ -637,7 +710,7 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
 
     // ——— Native create-booking flow —————————————————————————————————————
     fun openNewBookingSheet() {
-        val today = runCatching { java.time.LocalDate.now().toString() }.getOrDefault("")
+        val today = runCatching { LocalDate.now().toString() }.getOrDefault("")
         _uiState.update {
             it.copy(
                 showNewBookingSheet = true,
@@ -782,35 +855,115 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun applyBookingStatusLocally(bookingId: String, status: String) {
+        applyBookingLocally(bookingId) { booking -> booking.copy(status = status) }
+    }
+
+    private fun applyBookingLocally(bookingId: String, transform: (BookingSummary) -> BookingSummary) {
         _uiState.update { state ->
             val updatedOverview = state.overviewData?.let { ov ->
                 ov.copy(
-                    todayRows = ov.todayRows.map { b ->
-                        if (b.id == bookingId) b.copy(status = status) else b
-                    },
-                    nextRows = ov.nextRows.map { b ->
-                        if (b.id == bookingId) b.copy(status = status) else b
-                    },
+                    todayRows = ov.todayRows.map { b -> if (b.id == bookingId) transform(b) else b },
+                    nextRows = ov.nextRows.map { b -> if (b.id == bookingId) transform(b) else b },
                 )
             }
             val updatedCalendar = state.calendarData?.let { cal ->
                 cal.copy(
-                    rows = cal.rows.map { b ->
-                        if (b.id == bookingId) b.copy(status = status) else b
-                    },
+                    rows = cal.rows.map { b -> if (b.id == bookingId) transform(b) else b },
                 )
             }
-            val updatedSelected = if (state.selectedBooking?.id == bookingId) {
-                state.selectedBooking.copy(status = status)
-            } else state.selectedBooking
+            val selected = state.selectedBooking
+            val updatedSelected = if (selected?.id == bookingId) transform(selected) else selected
             state.copy(
-                bookings = state.bookings.map { b ->
-                    if (b.id == bookingId) b.copy(status = status) else b
-                },
+                bookings = state.bookings.map { b -> if (b.id == bookingId) transform(b) else b },
                 overviewData = updatedOverview,
                 calendarData = updatedCalendar,
                 selectedBooking = updatedSelected,
             )
+        }
+    }
+
+    fun openRescheduleSheet(booking: BookingSummary) {
+        val today = runCatching { LocalDate.now().toString() }.getOrDefault("")
+        val parsedDate = parseBookingDate(booking.startsAt)
+        val parsedTime = parseBookingTime(booking.startsAt)
+        _uiState.update {
+            it.copy(
+                showRescheduleSheet = true,
+                rescheduleBookingId = booking.id,
+                rescheduleDate = parsedDate.ifBlank { it.calendarDate ?: today },
+                rescheduleTime = parsedTime,
+                rescheduleError = null,
+                isRescheduling = false,
+            )
+        }
+    }
+
+    fun closeRescheduleSheet() {
+        _uiState.update {
+            it.copy(
+                showRescheduleSheet = false,
+                rescheduleError = null,
+                isRescheduling = false,
+            )
+        }
+    }
+
+    fun updateRescheduleDate(value: String) {
+        _uiState.update { it.copy(rescheduleDate = value, rescheduleError = null) }
+    }
+
+    fun updateRescheduleTime(value: String) {
+        _uiState.update { it.copy(rescheduleTime = value, rescheduleError = null) }
+    }
+
+    fun rescheduleBooking() {
+        val session = uiState.value.session ?: return
+        val snapshot = uiState.value
+        val bookingId = snapshot.rescheduleBookingId ?: return
+        val startsAt = combineDateTimeToIso(snapshot.rescheduleDate, snapshot.rescheduleTime.ifBlank { "09:00" })
+        val validationError = when {
+            snapshot.rescheduleDate.isBlank() -> "Pick a date (YYYY-MM-DD)."
+            startsAt.isBlank() -> "Pick a valid date and time."
+            else -> null
+        }
+        if (validationError != null) {
+            _uiState.update { it.copy(rescheduleError = validationError) }
+            return
+        }
+        _uiState.update { it.copy(isRescheduling = true, rescheduleError = null, errorMessage = null) }
+        viewModelScope.launch {
+            runCatching {
+                newClient(session.baseUrl).updateBooking(
+                    session.deviceKey,
+                    bookingId,
+                    UpdateBookingRequest(startsAt = startsAt),
+                )
+            }.onSuccess { updated ->
+                val nextStartsAt = updated.startsAt.ifBlank { startsAt }
+                applyBookingLocally(bookingId) { booking ->
+                    booking.copy(
+                        startsAt = nextStartsAt,
+                        endsAt = updated.endsAt.ifBlank { booking.endsAt },
+                        status = updated.status.ifBlank { booking.status },
+                    )
+                }
+                _uiState.update {
+                    it.copy(
+                        isRescheduling = false,
+                        showRescheduleSheet = false,
+                        rescheduleError = null,
+                        actionMessage = "Booking rescheduled.",
+                    )
+                }
+                refreshSelectedSection()
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isRescheduling = false,
+                        rescheduleError = error.message ?: "Could not reschedule the booking.",
+                    )
+                }
+            }
         }
     }
 
@@ -1333,53 +1486,129 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun upsertLocalDeal(id: String, title: String, subtitle: String?, status: String) {
-        val existing = uiState.value.moduleContent["deals"]
-        val current = existing?.payload ?: return
-        val next = if (current.items.any { it.id == id }) {
-            current.items.map { item ->
-                if (item.id == id) item.copy(title = title, subtitle = subtitle, status = status) else item
-            }
-        } else {
-            listOf(
-                lk.dinaya.mobile.data.ModuleItem(
-                    id = id,
-                    title = title,
-                    subtitle = subtitle,
-                    meta = null,
-                    status = status,
-                ),
-            ) + current.items
+    fun createDeal(
+        serviceId: String,
+        locationId: String,
+        staffId: String?,
+        discountPercent: Int,
+        slotsTotal: Int,
+        dealWindowStart: String,
+        dealWindowEnd: String,
+        apptWindowStart: String,
+        apptWindowEnd: String,
+        notifyClients: Boolean = false,
+    ) {
+        val session = uiState.value.session ?: return
+        val validationError = validateDealCreate(
+            serviceId = serviceId,
+            locationId = locationId,
+            discountPercent = discountPercent,
+            slotsTotal = slotsTotal,
+            dealWindowStart = dealWindowStart,
+            dealWindowEnd = dealWindowEnd,
+            apptWindowStart = apptWindowStart,
+            apptWindowEnd = apptWindowEnd,
+        )
+        if (validationError != null) {
+            _uiState.update { it.copy(errorMessage = validationError) }
+            return
         }
-        _uiState.update {
-            it.copy(
-                moduleContent = it.moduleContent + (
-                    "deals" to ModuleContentState(payload = current.copy(items = next))
-                ),
-                actionMessage = "Deal saved on this device.",
-            )
+        _uiState.update { it.copy(catalogBusy = true, errorMessage = null) }
+        viewModelScope.launch {
+            runCatching {
+                newClient(session.baseUrl).createDeal(
+                    session.deviceKey,
+                    CreateDealRequest(
+                        serviceId = serviceId,
+                        locationId = locationId,
+                        staffId = staffId?.trim()?.ifBlank { null },
+                        discountPercent = discountPercent,
+                        slotsTotal = slotsTotal,
+                        dealWindowStart = dealWindowStart,
+                        dealWindowEnd = dealWindowEnd,
+                        apptWindowStart = apptWindowStart,
+                        apptWindowEnd = apptWindowEnd,
+                        notifyClients = notifyClients,
+                    ),
+                )
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(catalogBusy = false, actionMessage = "Deal created.")
+                }
+                loadSectionModule("deals", force = true)
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        catalogBusy = false,
+                        errorMessage = error.message ?: "Could not create the deal.",
+                    )
+                }
+            }
         }
     }
 
-    fun addLocalBroadcast(id: String, title: String, subtitle: String?, status: String) {
-        val existing = uiState.value.moduleContent["broadcasts"]
-        val current = existing?.payload ?: return
-        val next = listOf(
-            lk.dinaya.mobile.data.ModuleItem(
-                id = id,
-                title = title,
-                subtitle = subtitle,
-                meta = null,
-                status = status,
-            ),
-        ) + current.items
-        _uiState.update {
-            it.copy(
-                moduleContent = it.moduleContent + (
-                    "broadcasts" to ModuleContentState(payload = current.copy(items = next))
-                ),
-                actionMessage = "Broadcast drafted on this device.",
-            )
+    fun createBroadcast(
+        name: String,
+        channel: String,
+        body: String,
+        subject: String? = null,
+        audienceType: String = "all",
+        audienceStage: String? = null,
+        sendNow: Boolean = false,
+    ) {
+        val session = uiState.value.session ?: return
+        val trimmedName = name.trim()
+        val trimmedBody = body.trim()
+        val validationError = validateBroadcastCreate(
+            name = trimmedName,
+            channel = channel,
+            body = trimmedBody,
+            audienceType = audienceType,
+            audienceStage = audienceStage,
+        )
+        if (validationError != null) {
+            _uiState.update { it.copy(errorMessage = validationError) }
+            return
+        }
+        _uiState.update { it.copy(catalogBusy = true, errorMessage = null) }
+        viewModelScope.launch {
+            runCatching {
+                newClient(session.baseUrl).createBroadcast(
+                    session.deviceKey,
+                    CreateBroadcastRequest(
+                        name = trimmedName,
+                        channel = channel,
+                        body = trimmedBody,
+                        subject = subject?.trim()?.ifBlank { null },
+                        audienceType = audienceType,
+                        audienceStage = audienceStage?.trim()?.ifBlank { null },
+                        sendNow = sendNow,
+                    ),
+                )
+            }.onSuccess { created ->
+                val status = created.status.lowercase().ifBlank { if (sendNow) "sending" else "draft" }
+                val message = when (status) {
+                    "draft" -> "Broadcast saved as a draft."
+                    "sent" -> "Broadcast sent."
+                    "failed" -> "Broadcast failed to send."
+                    "sending" -> "Broadcast is sending."
+                    else -> "Broadcast created."
+                }
+                _uiState.update {
+                    it.copy(
+                        catalogBusy = false,
+                        actionMessage = message,
+                    )
+                }
+                loadSectionModule("broadcasts", force = true)
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        catalogBusy = false,
+                        errorMessage = error.message ?: "Could not create the broadcast.",
+                    )
+                }
+            }
         }
     }
 

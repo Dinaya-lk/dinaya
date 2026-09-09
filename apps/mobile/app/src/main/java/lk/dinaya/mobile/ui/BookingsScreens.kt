@@ -29,17 +29,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -421,6 +421,208 @@ internal fun NewBookingSheet(
                         )
                     } else {
                         Text("Create booking", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+// ——— Native reschedule bottom sheet ——————————————————————————————————————
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun RescheduleBookingSheet(
+    state: DinayaUiState,
+    viewModel: DinayaViewModel,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val today = remember { runCatching { LocalDate.now() }.getOrNull() }
+    val booking = remember(
+        state.rescheduleBookingId,
+        state.bookings,
+        state.overviewData,
+        state.calendarData,
+    ) {
+        val id = state.rescheduleBookingId
+        state.bookings.firstOrNull { it.id == id }
+            ?: state.overviewData?.todayRows?.firstOrNull { it.id == id }
+            ?: state.overviewData?.nextRows?.firstOrNull { it.id == id }
+            ?: state.calendarData?.rows?.firstOrNull { it.id == id }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = DinayaRadiusSheet,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 40.dp, height = 4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)),
+                )
+            }
+
+            Text(
+                text = "Reschedule",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = booking?.let {
+                    "${it.clientName.ifBlank { "Client" }} · ${it.serviceName}"
+                } ?: "Pick a new date and time.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (state.rescheduleError != null) {
+                ErrorBanner(state.rescheduleError)
+            }
+
+            Text(
+                text = "DATE *",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (today != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    listOf(0L to "Today", 1L to "Tomorrow").forEach { (offset, label) ->
+                        val date = today.plusDays(offset).toString()
+                        val active = state.rescheduleDate == date
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(DinayaRadiusPill)
+                                .background(
+                                    if (active) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surface,
+                                )
+                                .border(
+                                    BorderStroke(
+                                        1.dp,
+                                        if (active) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    ),
+                                    DinayaRadiusPill,
+                                )
+                                .clickable { viewModel.updateRescheduleDate(date) }
+                                .padding(vertical = 8.dp)
+                                .semantics { contentDescription = "Set reschedule date to $label" },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                                color = if (active) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+            AuthField(
+                value = state.rescheduleDate,
+                onValueChange = viewModel::updateRescheduleDate,
+                label = "Date (YYYY-MM-DD)",
+            )
+
+            Text(
+                text = "TIME *",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("09:00", "12:00", "15:00", "18:00").forEach { slot ->
+                    val active = state.rescheduleTime == slot
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(DinayaRadiusPill)
+                            .background(
+                                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surface,
+                            )
+                            .border(
+                                BorderStroke(
+                                    1.dp,
+                                    if (active) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                ),
+                                DinayaRadiusPill,
+                            )
+                            .clickable { viewModel.updateRescheduleTime(slot) }
+                            .padding(vertical = 6.dp)
+                            .semantics { contentDescription = "Set reschedule time to $slot" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = slot,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (active) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            AuthField(
+                value = state.rescheduleTime,
+                onValueChange = viewModel::updateRescheduleTime,
+                label = "Time (HH:mm)",
+                keyboardType = KeyboardType.Number,
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    onClick = onDismiss,
+                    enabled = !state.isRescheduling,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .semantics { contentDescription = "Cancel reschedule" },
+                ) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = viewModel::rescheduleBooking,
+                    enabled = !state.isRescheduling,
+                    shape = DinayaRadiusButton,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    modifier = Modifier
+                        .weight(2f)
+                        .height(48.dp)
+                        .semantics { contentDescription = "Save new booking time" },
+                ) {
+                    if (state.isRescheduling) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text("Save", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

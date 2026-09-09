@@ -289,6 +289,16 @@ class DinayaApiClient(
             )
         }
 
+    suspend fun createDeal(deviceKey: String, body: CreateDealRequest): DealDetail =
+        withContext(Dispatchers.IO) {
+            request(
+                method = "POST",
+                path = mobilePath("deals"),
+                deviceKey = deviceKey,
+                body = body.toJson(),
+            ).toDealDetail()
+        }
+
     suspend fun patchBusinessProfile(
         deviceKey: String,
         name: String? = null,
@@ -463,6 +473,16 @@ class DinayaApiClient(
                 mobilePath("payments/$paymentId"),
                 deviceKey = deviceKey,
             ).toPaymentDetail()
+        }
+
+    suspend fun createBroadcast(deviceKey: String, body: CreateBroadcastRequest): BroadcastCreateResult =
+        withContext(Dispatchers.IO) {
+            request(
+                method = "POST",
+                path = mobilePath("broadcasts"),
+                deviceKey = deviceKey,
+                body = body.toJson(),
+            ).toBroadcastCreateResult()
         }
 
     suspend fun triggerBroadcast(deviceKey: String, broadcastId: String): BroadcastResult =
@@ -726,6 +746,20 @@ internal fun combineDateTimeToIso(date: String, time: String): String {
     }.getOrDefault("")
 }
 
+/** Prefer `YYYY-MM-DDTHH:mm:ss` (optional trailing Z) for deal/broadcast windows. */
+internal fun normalizeIsoDateTime(value: String): String {
+    val trimmed = value.trim()
+    if (trimmed.isBlank()) return trimmed
+    val hasZ = trimmed.endsWith("Z", ignoreCase = true)
+    val core = if (hasZ) trimmed.dropLast(1) else trimmed
+    val withSeconds = when {
+        Regex("""^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$""").matches(core) -> "$core:00"
+        Regex("""^\d{4}-\d{2}-\d{2}$""").matches(core) -> "${core}T09:00:00"
+        else -> core
+    }
+    return if (hasZ) "${withSeconds}Z" else withSeconds
+}
+
 internal fun JSONObject.toLoginResult() = LoginResult(
     deviceKey = optString("mobileKey").ifBlank { optString("desktopKey") }.ifBlank { optString("deviceKey") },
     auth = getJSONObject("auth").toAuthSummary(),
@@ -812,6 +846,43 @@ internal fun LocationUpsertRequest.toJson(): JSONObject {
     if (!phone.isNullOrBlank()) json.put("phone", phone)
     if (isActive != null) json.put("isActive", isActive)
     if (isDefault != null) json.put("isDefault", isDefault)
+    return json
+}
+
+internal fun CreateDealRequest.toJson(): JSONObject {
+    val json = JSONObject()
+        .put("serviceId", serviceId)
+        .put("locationId", locationId)
+        .put("discountPercent", discountPercent)
+        .put("slotsTotal", slotsTotal)
+        .put("dealWindowStart", normalizeIsoDateTime(dealWindowStart))
+        .put("dealWindowEnd", normalizeIsoDateTime(dealWindowEnd))
+        .put("apptWindowStart", normalizeIsoDateTime(apptWindowStart))
+        .put("apptWindowEnd", normalizeIsoDateTime(apptWindowEnd))
+        .put("notifyClients", notifyClients)
+    if (!staffId.isNullOrBlank()) json.put("staffId", staffId)
+    return json
+}
+
+internal fun CreateBroadcastRequest.toJson(): JSONObject {
+    val json = JSONObject()
+        .put("name", name)
+        .put("channel", channel.trim().lowercase())
+        .put("body", body)
+        .put("audienceType", audienceType.trim().lowercase().ifBlank { "all" })
+        .put("sendNow", sendNow)
+    if (!subject.isNullOrBlank()) json.put("subject", subject)
+    val type = audienceType.trim().lowercase()
+    if (type == "stage" && !audienceStage.isNullOrBlank()) {
+        json.put("audienceFilter", JSONObject().put("stage", audienceStage.trim()))
+    } else if (type == "tags") {
+        val tags = audienceTags.orEmpty().map { it.trim() }.filter { it.isNotEmpty() }
+        if (tags.isNotEmpty()) {
+            val arr = JSONArray()
+            tags.forEach { arr.put(it) }
+            json.put("audienceFilter", JSONObject().put("tags", arr))
+        }
+    }
     return json
 }
 
@@ -909,6 +980,44 @@ internal fun JSONObject.toBroadcastResult(): BroadcastResult {
     )
 }
 
+internal fun JSONObject.toBroadcastCreateResult(): BroadcastCreateResult {
+    val broadcast = optJSONObject("broadcast") ?: this
+    return BroadcastCreateResult(
+        id = broadcast.optString("id").ifBlank { optString("id") },
+        status = broadcast.optString("status").ifBlank { "draft" },
+        name = broadcast.optString("name"),
+    )
+}
+
+internal fun JSONObject.toDealDetail(): DealDetail {
+    val deal = optJSONObject("deal") ?: this
+    val service = optJSONObject("service")
+    val location = optJSONObject("location")
+    val staff = optJSONObject("staff")
+    val notifiedValue = when {
+        has("notified") && !isNull("notified") -> optInt("notified")
+        deal.has("notified") && !deal.isNull("notified") -> deal.optInt("notified")
+        else -> null
+    }
+    return DealDetail(
+        id = deal.optString("id").ifBlank { optString("id") },
+        serviceId = deal.optString("serviceId").ifBlank { service?.optString("id").orEmpty() },
+        locationId = deal.optString("locationId").ifBlank { location?.optString("id").orEmpty() },
+        staffId = deal.optString("staffId").ifBlank { staff?.optString("id").orEmpty() }.takeIf { it.isNotBlank() },
+        discountPercent = deal.optInt("discountPercent"),
+        slotsTotal = deal.optInt("slotsTotal"),
+        slotsRedeemed = deal.optInt("slotsRedeemed"),
+        dealWindowStart = deal.optString("dealWindowStart"),
+        dealWindowEnd = deal.optString("dealWindowEnd"),
+        apptWindowStart = deal.optString("apptWindowStart"),
+        apptWindowEnd = deal.optString("apptWindowEnd"),
+        status = deal.optString("status").ifBlank { "active" },
+        serviceName = deal.optString("serviceName").ifBlank { service?.optString("name").orEmpty() },
+        locationName = deal.optString("locationName").ifBlank { location?.optString("name").orEmpty() },
+        notified = notifiedValue,
+    )
+}
+
 internal fun JSONObject.toAutomationToggleResult(): AutomationToggleResult {
     val automation = optJSONObject("automation") ?: this
     return AutomationToggleResult(
@@ -938,7 +1047,7 @@ internal fun JSONObject.toReportPayload(): ReportPayload {
         }
     }
     return ReportPayload(
-        range = reportsRangeText(reports),
+        range = reports.reportsRangeText(),
         metrics = metrics,
         serverTime = optString("serverTime"),
         webPath = optString("webPath").ifBlank { optString("webUrl").ifBlank { "/dashboard/reports" } },

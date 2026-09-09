@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDesktopRead } from "@/app/api/v1/desktop/_shared";
+import { requireDesktopRead, requireDesktopWrite } from "@/app/api/v1/desktop/_shared";
+import { withApiHandler } from "@/lib/api-handler";
 import {
   getBroadcastsDashboardList,
   isDashboardBroadcastChannelFilter,
@@ -7,6 +8,7 @@ import {
   type DashboardBroadcastChannelFilter,
   type DashboardBroadcastStatusFilter,
 } from "@/lib/dashboard/broadcasts";
+import { createDeviceBroadcast } from "@/lib/dashboard/device-broadcasts";
 import { PlanRequiredError, requirePro } from "@/lib/plan";
 import { withRateLimit } from "@/lib/rate-limit";
 
@@ -17,6 +19,18 @@ function parseLimit(value: string | null): number {
   const parsed = Number(value ?? DEFAULT_LIMIT);
   if (!Number.isFinite(parsed)) return DEFAULT_LIMIT;
   return Math.min(MAX_LIMIT, Math.max(1, Math.round(parsed)));
+}
+
+async function requireBroadcastAccess(businessId: string) {
+  try {
+    await requirePro(businessId, "broadcasts");
+    return null;
+  } catch (error) {
+    if (error instanceof PlanRequiredError) {
+      return NextResponse.json({ error: error.message }, { status: 402 });
+    }
+    throw error;
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -31,14 +45,8 @@ export async function GET(req: NextRequest) {
   }, { keySuffix: `${businessId}:${deviceId ?? "unknown"}` });
   if (!limited.ok) return limited.response;
 
-  try {
-    await requirePro(businessId, "broadcasts");
-  } catch (error) {
-    if (error instanceof PlanRequiredError) {
-      return NextResponse.json({ error: error.message }, { status: 402 });
-    }
-    throw error;
-  }
+  const accessError = await requireBroadcastAccess(businessId);
+  if (accessError) return accessError;
 
   const params = req.nextUrl.searchParams;
   const statusParam = params.get("status");
@@ -63,4 +71,50 @@ export async function GET(req: NextRequest) {
     serverTime: new Date().toISOString(),
     webUrl: "/dashboard/broadcasts",
   });
+}
+
+export async function POST(req: NextRequest) {
+  const authResult = await requireDesktopWrite(req);
+  if (!authResult.ok) return authResult.response;
+  const { businessId, deviceId } = authResult.context;
+
+  const limited = await withRateLimit(req, {
+    scope: "desktop-broadcast-create",
+    limit: 60,
+    windowSeconds: 60,
+  }, { keySuffix: `${businessId}:${deviceId ?? "unknown"}` });
+  if (!limited.ok) return limited.response;
+
+  const accessError = await requireBroadcastAccess(businessId);
+  if (accessError) return accessError;
+
+  return withApiHandler(async () => {
+    const result = await createDeviceBroadcast(
+      businessId,
+      await req.json().catch(() => null),
+    );
+
+    switch (result.status) {
+      case "created":
+        return NextResponse.json(
+          {
+            broadcast: result.broadcast,
+            serverTime: new Date().toISOString(),
+            webUrl: "/dashboard/broadcasts",
+          },
+          { status: 201 },
+        );
+      case "invalid":
+        return NextResponse.json(
+          result.fieldErrors
+            ? { error: result.error, fieldErrors: result.fieldErrors }
+            : { error: result.error },
+          { status: 400 },
+        );
+      default: {
+        const _exhaustive: never = result;
+        return _exhaustive;
+      }
+    }
+  }, "Unable to send broadcast.");
 }

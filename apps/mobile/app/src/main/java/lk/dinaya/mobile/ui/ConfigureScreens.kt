@@ -58,7 +58,8 @@ internal fun IntegrationsScreen(
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         GrowthHeader(
             title = payload?.title?.ifBlank { null } ?: "Integrations",
-            summary = payload?.summary?.ifBlank { null } ?: "Connected providers, payments, social, and voice state.",
+            summary = payload?.summary?.ifBlank { null }
+                ?: "Connected providers, payments, social, and voice. Connecting a provider opens dinaya.lk in your browser.",
             isLoading = moduleState?.isLoading == true,
             onRefresh = viewModel::refreshSelectedSection,
         )
@@ -86,7 +87,7 @@ internal fun IntegrationsScreen(
             SiteEmptyState(
                 title = payload?.emptyState?.ifBlank { null } ?: "No integrations yet",
                 body = if (searchQuery.isNotBlank()) "No providers matched \"$searchQuery\"."
-                else "Nothing here yet. Pull to refresh, or finish setup on the web if you need OAuth / PayHere keys.",
+                else "Pull to refresh. Connecting a provider opens dinaya.lk in your browser — OAuth stays there by design.",
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -159,20 +160,35 @@ private fun IntegrationRowCard(item: ModuleItem, dark: Boolean, onConnect: () ->
             }
         }
         if (!isConnected) {
-            OutlinedButton(
-                onClick = onConnect,
-                shape = DinayaRadiusButton,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 0.dp)
-                    .padding(bottom = 12.dp)
-                    .height(38.dp)
-                    .semantics { contentDescription = "Connect ${item.title} via browser" },
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(imageVector = Icons.Filled.OpenInBrowser, contentDescription = null, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Connect", style = MaterialTheme.typography.labelLarge)
+                OutlinedButton(
+                    onClick = onConnect,
+                    shape = DinayaRadiusButton,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .semantics { contentDescription = "Connect ${item.title} via browser" },
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.OpenInBrowser,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Connect", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                }
+                Text(
+                    "Opens dinaya.lk in your browser",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -223,7 +239,7 @@ internal fun AutomationsScreen(
             SiteEmptyState(
                 title = payload?.emptyState?.ifBlank { null } ?: "No automations yet",
                 body = if (searchQuery.isNotBlank()) "No rules matched \"$searchQuery\"."
-                else "Nothing here yet. Pull to refresh, or finish setup on the web if you need OAuth / PayHere keys.",
+                else "Nothing here yet. Pull to refresh, then toggle a rule on or off in the app.",
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -296,7 +312,8 @@ internal fun BillingScreen(
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         GrowthHeader(
             title = payload?.title?.ifBlank { null } ?: "Plan & billing",
-            summary = payload?.summary?.ifBlank { null } ?: "Current plan and subscription state.",
+            summary = payload?.summary?.ifBlank { null }
+                ?: "Current plan and invoices. Plan changes open dinaya.lk in your browser.",
             isLoading = moduleState?.isLoading == true,
             onRefresh = viewModel::refreshSelectedSection,
         )
@@ -329,7 +346,7 @@ internal fun BillingScreen(
                     plan.takeIf { it.isNotBlank() }?.let { StatusPill(it, dark) }
                 }
                 Text(
-                    "Upgrades, downgrades, and card changes open securely in your browser.",
+                    "Upgrades, downgrades, and card changes stay in the browser by design.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -346,12 +363,17 @@ internal fun BillingScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
-                        .semantics { contentDescription = "Manage billing on web" },
+                        .semantics { contentDescription = "Manage billing in browser" },
                 ) {
                     Icon(imageVector = Icons.Filled.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Manage billing on web", fontWeight = FontWeight.SemiBold)
+                    Text("Manage billing", fontWeight = FontWeight.SemiBold)
                 }
+                Text(
+                    "Opens dinaya.lk in your browser",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 

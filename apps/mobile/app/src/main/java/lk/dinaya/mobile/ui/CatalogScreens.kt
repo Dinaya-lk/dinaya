@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -50,7 +51,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,8 +62,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import lk.dinaya.mobile.data.AvailabilityMember
@@ -196,15 +199,17 @@ internal fun CatalogHeader(
             }
         }
         action?.invoke()
-        TextButton(
-            onClick = onOpenWeb,
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-            modifier = Modifier.height(48.dp),
-        ) {
-            Text("Open in web dashboard", style = MaterialTheme.typography.labelSmall)
-        }
+        Text(
+            text = "Open in browser",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier
+                .heightIn(min = 44.dp)
+                .clickable(onClick = onOpenWeb)
+                .semantics { contentDescription = "Open catalog in browser" }
+                .padding(vertical = 8.dp),
+        )
     }
 }
 
@@ -340,7 +345,12 @@ internal fun CatalogInitials(name: String) {
 }
 
 @Composable
-internal fun CatalogEmptyState(title: String, body: String) {
+internal fun CatalogEmptyState(
+    title: String,
+    body: String,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = DinayaRadiusCard,
@@ -351,7 +361,7 @@ internal fun CatalogEmptyState(title: String, body: String) {
         Column(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = title,
@@ -363,6 +373,25 @@ internal fun CatalogEmptyState(title: String, body: String) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (actionLabel != null && onAction != null) {
+                Button(
+                    onClick = onAction,
+                    shape = DinayaRadiusButton,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .semantics { contentDescription = actionLabel },
+                ) {
+                    Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(actionLabel, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
     }
 }
@@ -492,9 +521,15 @@ internal fun CatalogClientsScreen(
             CatalogLoading()
         } else if (items.isEmpty()) {
             CatalogEmptyState(
-                title = "No clients found",
+                title = if (searchQuery.isNotBlank()) "No clients found" else "No clients yet",
                 body = if (searchQuery.isNotBlank()) "No clients match \"$searchQuery\"."
                 else "Add a client to keep their bookings and notes in one place.",
+                actionLabel = if (searchQuery.isBlank()) "Add client" else null,
+                onAction = if (searchQuery.isBlank()) {
+                    { viewModel.startClientCreate(); sheetOpen = true }
+                } else {
+                    null
+                },
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -531,7 +566,6 @@ internal fun CatalogClientsScreen(
             onSaveNote = viewModel::saveClientNote,
             onStageChange = { next -> viewModel.updateClientStage(client.id, next) },
             onDismiss = { viewModel.selectCatalogClient(null) },
-            onOpenWeb = onOpenWeb,
         )
     }
 
@@ -635,7 +669,6 @@ private fun CatalogClientDetailSheet(
     onSaveNote: () -> Unit,
     onStageChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onOpenWeb: () -> Unit,
 ) {
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -844,15 +877,6 @@ private fun CatalogClientDetailSheet(
                 }
             }
 
-            TextButton(
-                onClick = onOpenWeb,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-            ) {
-                Text("View client in web dashboard", style = MaterialTheme.typography.labelSmall)
-            }
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
@@ -990,7 +1014,17 @@ internal fun ServicesScreen(
         if (moduleState?.isLoading == true && items.isEmpty()) {
             CatalogLoading()
         } else if (items.isEmpty()) {
-            CatalogEmptyState("No services yet", "Add your first service — name, price, and duration.")
+            CatalogEmptyState(
+                title = "No services yet",
+                body = if (searchQuery.isNotBlank()) "No services match \"$searchQuery\"."
+                else "Add your first service — name, price, and duration.",
+                actionLabel = if (searchQuery.isBlank()) "Add service" else null,
+                onAction = if (searchQuery.isBlank()) {
+                    { viewModel.startServiceCreate(); sheetOpen = true }
+                } else {
+                    null
+                },
+            )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items.forEach { item ->
@@ -1206,7 +1240,17 @@ internal fun StaffScreen(
         if (moduleState?.isLoading == true && items.isEmpty()) {
             CatalogLoading()
         } else if (items.isEmpty()) {
-            CatalogEmptyState("No staff yet", "Add a team member to take bookings.")
+            CatalogEmptyState(
+                title = "No staff yet",
+                body = if (searchQuery.isNotBlank()) "No staff match \"$searchQuery\"."
+                else "Add a team member to take bookings.",
+                actionLabel = if (searchQuery.isBlank()) "Add staff member" else null,
+                onAction = if (searchQuery.isBlank()) {
+                    { viewModel.startStaffCreate(); sheetOpen = true }
+                } else {
+                    null
+                },
+            )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items.forEach { item ->
@@ -1401,7 +1445,17 @@ internal fun LocationsScreen(
         if (moduleState?.isLoading == true && items.isEmpty()) {
             CatalogLoading()
         } else if (items.isEmpty()) {
-            CatalogEmptyState("No locations yet", "Add your first branch.")
+            CatalogEmptyState(
+                title = "No locations yet",
+                body = if (searchQuery.isNotBlank()) "No locations match \"$searchQuery\"."
+                else "Add your first branch.",
+                actionLabel = if (searchQuery.isBlank()) "Add location" else null,
+                onAction = if (searchQuery.isBlank()) {
+                    { viewModel.startLocationCreate(); sheetOpen = true }
+                } else {
+                    null
+                },
+            )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items.forEach { item ->

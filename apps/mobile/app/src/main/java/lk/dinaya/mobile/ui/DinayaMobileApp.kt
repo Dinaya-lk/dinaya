@@ -813,6 +813,7 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             dark = dark,
             onRequestStatus = handleRequestStatus,
             onDismiss = { viewModel.selectBooking(null) },
+            onReschedule = viewModel::openRescheduleSheet,
         )
     }
 
@@ -821,6 +822,14 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             state = state,
             viewModel = viewModel,
             onDismiss = viewModel::closeNewBookingSheet,
+        )
+    }
+
+    if (state.showRescheduleSheet) {
+        RescheduleBookingSheet(
+            state = state,
+            viewModel = viewModel,
+            onDismiss = viewModel::closeRescheduleSheet,
         )
     }
 
@@ -1586,6 +1595,7 @@ internal fun BookingDetailSheet(
     dark: Boolean,
     onRequestStatus: (String, String) -> Unit,
     onDismiss: () -> Unit,
+    onReschedule: (BookingSummary) -> Unit,
 ) {
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1751,6 +1761,33 @@ internal fun BookingDetailSheet(
                 }
             }
 
+            val canReschedule = when (booking.status.lowercase()) {
+                "cancelled", "completed", "no_show" -> false
+                else -> true
+            }
+            if (canReschedule) {
+                OutlinedButton(
+                    onClick = {
+                        onDismiss()
+                        onReschedule(booking)
+                    },
+                    shape = DinayaRadiusButton,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .semantics { contentDescription = "Reschedule this booking" },
+                ) {
+                    Text("Reschedule", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                Text(
+                    text = "This booking can no longer be moved.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f))
 
             // Native status editor (destructive choices confirm upstream).
@@ -1860,15 +1897,17 @@ internal fun ClientDetailSheet(
                 }
             }
 
-            OutlinedButton(
+            TextButton(
                 onClick = onOpenWeb,
-                shape = DinayaRadiusButton,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.fillMaxWidth().height(44.dp),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .semantics { contentDescription = "Open client in browser" },
             ) {
-                Icon(imageVector = Icons.Filled.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("View client in web dashboard", style = MaterialTheme.typography.labelLarge)
+                Text("Open in browser", style = MaterialTheme.typography.bodySmall)
             }
 
             Spacer(modifier = Modifier.height(16.dp))

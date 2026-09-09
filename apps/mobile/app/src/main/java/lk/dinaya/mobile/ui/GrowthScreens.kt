@@ -4,15 +4,19 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,7 +30,6 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,7 +44,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,11 +59,13 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import lk.dinaya.mobile.data.ModuleItem
 import lk.dinaya.mobile.data.StoredSession
+import lk.dinaya.mobile.data.combineDateTimeToIso
 
 // ——— Shared growth header (native-only: refresh, no forced web fallback) ———
 
@@ -108,6 +115,7 @@ internal fun GrowthHeader(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun GrowthFilterChips(
     options: List<Pair<String, String>>,
@@ -116,14 +124,16 @@ internal fun GrowthFilterChips(
     contentLabel: String,
 ) {
     val haptic = LocalHapticFeedback.current
-    Row(
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         options.forEach { (key, label) ->
             val active = selected == key
             Box(
                 modifier = Modifier
+                    .heightIn(min = 40.dp)
                     .clip(DinayaRadiusPill)
                     .background(
                         if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -133,7 +143,7 @@ internal fun GrowthFilterChips(
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onSelect(key)
                     }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
                     .semantics { contentDescription = "$contentLabel filter $label" },
                 contentAlignment = Alignment.Center,
             ) {
@@ -801,8 +811,9 @@ private fun MarketingToolRow(tool: ModuleItem, bookingUrl: String, businessName:
     }
 }
 
-// ——— Deals: list + active toggle + create/edit ———————————————————————————
+// ——— Deals: list + active toggle + native create sheet ————————————————————
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DealsScreen(
     state: DinayaUiState,
@@ -815,7 +826,7 @@ internal fun DealsScreen(
     val haptic = LocalHapticFeedback.current
     var statusFilter by remember { mutableStateOf("all") }
     var createOpen by remember { mutableStateOf(false) }
-    var editTarget by remember { mutableStateOf<ModuleItem?>(null) }
+    var detailTarget by remember { mutableStateOf<ModuleItem?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         GrowthHeader(
@@ -825,6 +836,7 @@ internal fun DealsScreen(
             onRefresh = viewModel::refreshSelectedSection,
         )
         if (moduleState?.errorMessage != null) ErrorText(moduleState.errorMessage)
+        CatalogErrorBanner(state.catalogError, onDismiss = viewModel::clearCatalogError)
         if (payload?.metrics?.isNotEmpty() == true) ModuleMetricsGrid(payload.metrics)
 
         GrowthFilterChips(
@@ -866,7 +878,7 @@ internal fun DealsScreen(
             SiteEmptyState(
                 title = payload?.emptyState?.ifBlank { null } ?: "No deals yet",
                 body = if (searchQuery.isNotBlank()) "No deals matched \"$searchQuery\"."
-                else "Create your first deal to fill quiet slots with discounted bookings.",
+                else "Create a deal with a service, discount, and dates.",
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -878,9 +890,9 @@ internal fun DealsScreen(
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.toggleDeal(item.id, enabled)
                         },
-                        onEdit = {
+                        onOpen = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            editTarget = item
+                            detailTarget = item
                         },
                     )
                 }
@@ -889,36 +901,24 @@ internal fun DealsScreen(
     }
 
     if (createOpen) {
-        DealEditDialog(
-            initialTitle = "",
-            initialSubtitle = "",
-            initialActive = true,
-            dialogTitle = "New deal",
+        DealCreateSheet(
+            state = state,
+            viewModel = viewModel,
             onDismiss = { createOpen = false },
-            onSave = { title, subtitle, active ->
-                val id = "local_${System.currentTimeMillis()}"
-                viewModel.upsertLocalDeal(id, title, subtitle.ifBlank { null }, if (active) "active" else "paused")
-                createOpen = false
-            },
         )
     }
-    editTarget?.let { target ->
-        DealEditDialog(
-            initialTitle = target.title,
-            initialSubtitle = target.subtitle.orEmpty(),
-            initialActive = target.status.equals("active", ignoreCase = true),
-            dialogTitle = "Edit deal",
-            onDismiss = { editTarget = null },
-            onSave = { title, subtitle, active ->
-                viewModel.upsertLocalDeal(target.id, title, subtitle.ifBlank { null }, if (active) "active" else "paused")
-                editTarget = null
-            },
+    detailTarget?.let { target ->
+        DealDetailSheet(
+            item = target,
+            dark = dark,
+            onToggle = { enabled -> viewModel.toggleDeal(target.id, enabled) },
+            onDismiss = { detailTarget = null },
         )
     }
 }
 
 @Composable
-private fun DealRowCard(item: ModuleItem, dark: Boolean, onToggle: (Boolean) -> Unit, onEdit: () -> Unit) {
+private fun DealRowCard(item: ModuleItem, dark: Boolean, onToggle: (Boolean) -> Unit, onOpen: () -> Unit) {
     val isActive = item.status.equals("active", ignoreCase = true)
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -927,7 +927,7 @@ private fun DealRowCard(item: ModuleItem, dark: Boolean, onToggle: (Boolean) -> 
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onEdit() }
+            .clickable { onOpen() }
             .semantics { contentDescription = "Deal ${item.title} ${item.status.orEmpty()}" },
     ) {
         Row(
@@ -956,63 +956,296 @@ private fun DealRowCard(item: ModuleItem, dark: Boolean, onToggle: (Boolean) -> 
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DealEditDialog(
-    initialTitle: String,
-    initialSubtitle: String,
-    initialActive: Boolean,
-    dialogTitle: String,
+private fun DealDetailSheet(
+    item: ModuleItem,
+    dark: Boolean,
+    onToggle: (Boolean) -> Unit,
     onDismiss: () -> Unit,
-    onSave: (String, String, Boolean) -> Unit,
 ) {
-    var title by remember { mutableStateOf(initialTitle) }
-    var subtitle by remember { mutableStateOf(initialSubtitle) }
-    var active by remember { mutableStateOf(initialActive) }
-    val haptic = LocalHapticFeedback.current
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val isActive = item.status.equals("active", ignoreCase = true)
+    var checked by remember(item.id, item.status) { mutableStateOf(isActive) }
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(dialogTitle, style = MaterialTheme.typography.titleLarge) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Deal title") },
-                    singleLine = true,
-                    shape = DinayaRadiusButton,
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Deal title input" },
+        sheetState = sheetState,
+        shape = DinayaRadiusSheet,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            GrowthSheetHandle()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    item.title.ifBlank { "Deal" },
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
                 )
-                OutlinedTextField(
-                    value = subtitle,
-                    onValueChange = { subtitle = it },
-                    label = { Text("Details (e.g. 20% off · 5/20 redeemed)") },
-                    shape = DinayaRadiusButton,
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Deal details input" },
-                )
-                Row(
+                StatusPill(if (checked) "active" else "paused", dark)
+            }
+            item.subtitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            item.meta?.takeIf { it.isNotBlank() }?.let {
+                DetailRow(label = "Ends", value = it.take(10))
+            }
+            GrowthSwitchRow(
+                title = "Active",
+                subtitle = if (checked) "Clients can claim this deal." else "Paused — hidden from booking.",
+                checked = checked,
+                onCheckedChange = {
+                    checked = it
+                    onToggle(it)
+                },
+                contentDescription = "Toggle deal ${item.title} active",
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun DealCreateSheet(
+    state: DinayaUiState,
+    viewModel: DinayaViewModel,
+    onDismiss: () -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val today = remember { runCatching { LocalDate.now() }.getOrNull() }
+
+    LaunchedEffect(Unit) {
+        viewModel.ensureServicesModule()
+        viewModel.ensureLocationsModule()
+    }
+
+    val serviceState = state.moduleContent["services"]
+    val locationState = state.moduleContent["locations"]
+    val serviceItems = serviceState?.payload?.items.orEmpty().filter { it.id.isNotBlank() }
+    val locationItems = locationState?.payload?.items.orEmpty().filter { it.id.isNotBlank() }
+    val staffOptions = state.bootstrap?.staff.orEmpty().filter { it.id.isNotBlank() }
+
+    var serviceId by remember { mutableStateOf("") }
+    var locationId by remember { mutableStateOf("") }
+    var staffId by remember { mutableStateOf<String?>(null) }
+    var discountPercent by remember { mutableIntStateOf(20) }
+    var slotsText by remember { mutableStateOf("5") }
+    var dealStart by remember { mutableStateOf(today?.toString().orEmpty()) }
+    var dealEnd by remember { mutableStateOf(today?.plusDays(7)?.toString().orEmpty()) }
+    var apptStart by remember { mutableStateOf(today?.toString().orEmpty()) }
+    var apptEnd by remember { mutableStateOf(today?.plusDays(14)?.toString().orEmpty()) }
+    var notifyClients by remember { mutableStateOf(false) }
+
+    val slotsTotal = slotsText.trim().toIntOrNull() ?: -1
+    val canSave = isDealCreateFormValid(
+        serviceId = serviceId,
+        locationId = locationId,
+        discountPercent = discountPercent,
+        slotsTotal = slotsTotal,
+        dealWindowStart = dealStart,
+        dealWindowEnd = dealEnd,
+        apptWindowStart = apptStart,
+        apptWindowEnd = apptEnd,
+    )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = DinayaRadiusSheet,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            GrowthSheetHandle()
+            Text("New deal", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                "Pick a service, discount, and the dates this offer runs.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            CatalogErrorBanner(state.catalogError, onDismiss = viewModel::clearCatalogError)
+
+            ModuleItemPicker(
+                label = "SERVICE *",
+                items = serviceItems,
+                selectedId = serviceId,
+                onSelect = { serviceId = it },
+                emptyTitle = if (serviceState?.isLoading == true) "Loading services…" else "No services yet",
+                emptyBody = if (serviceState?.isLoading == true) "Fetching your catalog for the picker."
+                else "Add a service first, then come back to create a deal.",
+                contentDescriptionPrefix = "Select service",
+            )
+            ModuleItemPicker(
+                label = "LOCATION *",
+                items = locationItems,
+                selectedId = locationId,
+                onSelect = { locationId = it },
+                emptyTitle = if (locationState?.isLoading == true) "Loading locations…" else "No locations yet",
+                emptyBody = if (locationState?.isLoading == true) "Fetching locations for the picker."
+                else "Add a location first, then come back to create a deal.",
+                contentDescriptionPrefix = "Select location",
+            )
+
+            if (staffOptions.isNotEmpty()) {
+                Text("STAFF (OPTIONAL)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text("Active", style = MaterialTheme.typography.bodyMedium)
-                    Switch(checked = active, onCheckedChange = { active = it })
+                    GrowthChoiceChip(
+                        label = "Any staff",
+                        selected = staffId == null,
+                        onClick = { staffId = null },
+                        contentDescription = "No specific staff",
+                    )
+                    staffOptions.forEach { staff ->
+                        GrowthChoiceChip(
+                            label = staff.name.ifBlank { "Staff" },
+                            selected = staffId == staff.id,
+                            onClick = { staffId = staff.id },
+                            contentDescription = "Staff ${staff.name}",
+                        )
+                    }
                 }
             }
-        },
-        confirmButton = {
+
+            Text("DISCOUNT *", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                listOf(10, 20, 30, 40, 50).forEach { pct ->
+                    val active = discountPercent == pct
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(DinayaRadiusPill)
+                            .background(
+                                if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surface,
+                            )
+                            .border(
+                                BorderStroke(
+                                    1.dp,
+                                    if (active) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                ),
+                                DinayaRadiusPill,
+                            )
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                discountPercent = pct
+                            }
+                            .semantics { contentDescription = "Discount $pct percent" },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "$pct%",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
+                            color = if (active) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            CatalogField(
+                label = "Slots (1–20)",
+                value = slotsText,
+                onValueChange = { incoming ->
+                    if (incoming.length <= 2 && incoming.all { it.isDigit() }) slotsText = incoming
+                },
+                keyboardType = KeyboardType.Number,
+                placeholder = "5",
+            )
+
+            CatalogField(
+                label = "Deal starts (YYYY-MM-DD)",
+                value = dealStart,
+                onValueChange = { dealStart = it },
+                placeholder = "YYYY-MM-DD",
+            )
+            CatalogField(
+                label = "Deal ends (YYYY-MM-DD)",
+                value = dealEnd,
+                onValueChange = { dealEnd = it },
+                placeholder = "YYYY-MM-DD",
+            )
+            CatalogField(
+                label = "Appointments from (YYYY-MM-DD)",
+                value = apptStart,
+                onValueChange = { apptStart = it },
+                placeholder = "YYYY-MM-DD",
+            )
+            CatalogField(
+                label = "Appointments until (YYYY-MM-DD)",
+                value = apptEnd,
+                onValueChange = { apptEnd = it },
+                placeholder = "YYYY-MM-DD",
+            )
+
+            GrowthSwitchRow(
+                title = "Notify clients",
+                subtitle = "Send a message when this deal goes live.",
+                checked = notifyClients,
+                onCheckedChange = { notifyClients = it },
+                contentDescription = "Notify clients about this deal",
+            )
+
             Button(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onSave(title.trim(), subtitle.trim(), active)
+                    viewModel.createDeal(
+                        serviceId = serviceId,
+                        locationId = locationId,
+                        staffId = staffId,
+                        discountPercent = discountPercent,
+                        slotsTotal = slotsTotal,
+                        dealWindowStart = combineDateTimeToIso(dealStart, "00:00"),
+                        dealWindowEnd = combineDateTimeToIso(dealEnd, "23:59"),
+                        apptWindowStart = combineDateTimeToIso(apptStart, "00:00"),
+                        apptWindowEnd = combineDateTimeToIso(apptEnd, "23:59"),
+                        notifyClients = notifyClients,
+                    )
+                    onDismiss()
                 },
-                enabled = title.isNotBlank(),
+                enabled = canSave && !state.catalogBusy,
                 shape = DinayaRadiusButton,
-            ) { Text("Save") }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss, shape = DinayaRadiusButton) { Text("Cancel") }
-        },
-    )
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .semantics { contentDescription = "Save new deal" },
+            ) {
+                Text("Save", fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
 }
 
 // ——— Broadcasts: list + create/test-send —————————————————————————————————
@@ -1040,6 +1273,7 @@ internal fun BroadcastsScreen(
             onRefresh = viewModel::refreshSelectedSection,
         )
         if (moduleState?.errorMessage != null) ErrorText(moduleState.errorMessage)
+        CatalogErrorBanner(state.catalogError, onDismiss = viewModel::clearCatalogError)
         if (payload?.metrics?.isNotEmpty() == true) ModuleMetricsGrid(payload.metrics)
 
         GrowthFilterChips(
@@ -1131,13 +1365,10 @@ internal fun BroadcastsScreen(
     }
 
     if (createOpen) {
-        BroadcastCreateDialog(
+        BroadcastCreateSheet(
+            state = state,
+            viewModel = viewModel,
             onDismiss = { createOpen = false },
-            onSave = { name, channel ->
-                val id = "local_${System.currentTimeMillis()}"
-                viewModel.addLocalBroadcast(id, name, "$channel · draft", "draft")
-                createOpen = false
-            },
         )
     }
 
@@ -1224,46 +1455,157 @@ internal fun BroadcastsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BroadcastCreateDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+private fun BroadcastCreateSheet(
+    state: DinayaUiState,
+    viewModel: DinayaViewModel,
+    onDismiss: () -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var name by remember { mutableStateOf("") }
     var channel by remember { mutableStateOf("whatsapp") }
-    val haptic = LocalHapticFeedback.current
-    AlertDialog(
+    var body by remember { mutableStateOf("") }
+    var subject by remember { mutableStateOf("") }
+    var audienceType by remember { mutableStateOf("all") }
+    var audienceStage by remember { mutableStateOf("active") }
+    var sendNow by remember { mutableStateOf(false) }
+
+    val canCreate = isBroadcastCreateFormValid(
+        name = name,
+        channel = channel,
+        body = body,
+        audienceType = audienceType,
+        audienceStage = audienceStage,
+    )
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("New broadcast", style = MaterialTheme.typography.titleLarge) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Broadcast name") },
-                    singleLine = true,
-                    shape = DinayaRadiusButton,
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Broadcast name input" },
+        sheetState = sheetState,
+        shape = DinayaRadiusSheet,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            GrowthSheetHandle()
+            Text("New broadcast", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                "Draft a message, pick a channel, and choose who should receive it.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            CatalogErrorBanner(state.catalogError, onDismiss = viewModel::clearCatalogError)
+
+            CatalogField(
+                label = "Name",
+                value = name,
+                onValueChange = { name = it },
+                placeholder = "Broadcast name",
+            )
+
+            Text("CHANNEL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            GrowthFilterChips(
+                options = listOf("whatsapp" to "WhatsApp", "sms" to "SMS", "email" to "Email"),
+                selected = channel,
+                onSelect = { channel = it },
+                contentLabel = "Broadcast channel",
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "Message",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-                GrowthFilterChips(
-                    options = listOf("whatsapp" to "WhatsApp", "sms" to "SMS", "email" to "Email"),
-                    selected = channel,
-                    onSelect = { channel = it },
-                    contentLabel = "Broadcast channel",
+                OutlinedTextField(
+                    value = body,
+                    onValueChange = { body = it },
+                    placeholder = { Text("Write the message clients will receive…") },
+                    minLines = 4,
+                    maxLines = 8,
+                    shape = DinayaRadiusCard,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "Broadcast message body" },
                 )
             }
-        },
-        confirmButton = {
+
+            if (channel == "email") {
+                CatalogField(
+                    label = "Subject (optional)",
+                    value = subject,
+                    onValueChange = { subject = it },
+                    placeholder = "Email subject",
+                )
+            }
+
+            Text("AUDIENCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            GrowthFilterChips(
+                options = listOf("all" to "All clients", "stage" to "By stage"),
+                selected = audienceType,
+                onSelect = { audienceType = it },
+                contentLabel = "Broadcast audience",
+            )
+            if (audienceType == "stage") {
+                GrowthFilterChips(
+                    options = listOf(
+                        "lead" to "Lead",
+                        "prospect" to "Prospect",
+                        "active" to "Active",
+                        "churned" to "Churned",
+                    ),
+                    selected = audienceStage,
+                    onSelect = { audienceStage = it },
+                    contentLabel = "Broadcast audience stage",
+                )
+            }
+
+            GrowthSwitchRow(
+                title = "Send immediately",
+                subtitle = "Off keeps this as a draft you can send later.",
+                checked = sendNow,
+                onCheckedChange = { sendNow = it },
+                contentDescription = "Send broadcast immediately",
+            )
+
             Button(
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onSave(name.trim(), channel)
+                    viewModel.createBroadcast(
+                        name = name.trim(),
+                        channel = channel,
+                        body = body.trim(),
+                        subject = if (channel == "email") subject.trim().ifBlank { null } else null,
+                        audienceType = audienceType,
+                        audienceStage = if (audienceType == "stage") audienceStage else null,
+                        sendNow = sendNow,
+                    )
+                    onDismiss()
                 },
-                enabled = name.isNotBlank(),
+                enabled = canCreate && !state.catalogBusy,
                 shape = DinayaRadiusButton,
-            ) { Text("Create") }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss, shape = DinayaRadiusButton) { Text("Cancel") }
-        },
-    )
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .semantics { contentDescription = "Create broadcast" },
+            ) {
+                Text("Create", fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
 }
 
 // ——— AI Hub: workflow list + run/trigger ——————————————————————————————————
@@ -1538,5 +1880,231 @@ internal fun ReportsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun GrowthSheetHandle() {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .size(width = 40.dp, height = 4.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                .semantics { contentDescription = "Drag handle" },
+        )
+    }
+}
+
+@Composable
+private fun GrowthSwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    contentDescription: String,
+) {
+    val haptic = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f).padding(end = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onCheckedChange(it)
+            },
+            modifier = Modifier.semantics { this.contentDescription = contentDescription },
+        )
+    }
+}
+
+@Composable
+private fun GrowthChoiceChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    contentDescription: String,
+) {
+    val haptic = LocalHapticFeedback.current
+    Box(
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .clip(DinayaRadiusPill)
+            .background(
+                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                else MaterialTheme.colorScheme.surface,
+            )
+            .border(
+                BorderStroke(
+                    1.dp,
+                    if (selected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                ),
+                DinayaRadiusPill,
+            )
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            }
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun ModuleItemPicker(
+    label: String,
+    items: List<ModuleItem>,
+    selectedId: String,
+    onSelect: (String) -> Unit,
+    emptyTitle: String,
+    emptyBody: String,
+    contentDescriptionPrefix: String,
+) {
+    val haptic = LocalHapticFeedback.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (items.isEmpty()) {
+            SiteEmptyState(title = emptyTitle, body = emptyBody)
+        } else {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                ),
+                shape = DinayaRadiusCard,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 148.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    items.forEach { item ->
+                        val selected = selectedId == item.id
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .clip(DinayaRadiusButton)
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else MaterialTheme.colorScheme.surface,
+                                )
+                                .border(
+                                    BorderStroke(
+                                        1.dp,
+                                        if (selected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    ),
+                                    DinayaRadiusButton,
+                                )
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onSelect(item.id)
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                                .semantics { contentDescription = "$contentDescriptionPrefix ${item.title}" },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = item.title.ifBlank { "Untitled" },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            item.subtitle?.takeIf { it.isNotBlank() }?.let {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = it.take(24),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val IsoDatePattern = Regex("""^\d{4}-\d{2}-\d{2}$""")
+private val BroadcastChannels = setOf("whatsapp", "sms", "email")
+private val AudienceStages = setOf("lead", "prospect", "active", "churned")
+
+internal fun parseIsoDate(value: String): LocalDate? {
+    val trimmed = value.trim()
+    if (!IsoDatePattern.matches(trimmed)) return null
+    return runCatching { LocalDate.parse(trimmed) }.getOrNull()
+}
+
+internal fun isIsoDateOnOrAfter(start: String, end: String): Boolean {
+    val startDate = parseIsoDate(start) ?: return false
+    val endDate = parseIsoDate(end) ?: return false
+    return !endDate.isBefore(startDate)
+}
+
+internal fun isDealCreateFormValid(
+    serviceId: String,
+    locationId: String,
+    discountPercent: Int,
+    slotsTotal: Int,
+    dealWindowStart: String,
+    dealWindowEnd: String,
+    apptWindowStart: String,
+    apptWindowEnd: String,
+): Boolean {
+    if (serviceId.isBlank() || locationId.isBlank()) return false
+    if (discountPercent !in 10..50) return false
+    if (slotsTotal !in 1..20) return false
+    if (!isIsoDateOnOrAfter(dealWindowStart, dealWindowEnd)) return false
+    if (!isIsoDateOnOrAfter(apptWindowStart, apptWindowEnd)) return false
+    return true
+}
+
+internal fun isBroadcastCreateFormValid(
+    name: String,
+    channel: String,
+    body: String,
+    audienceType: String,
+    audienceStage: String?,
+): Boolean {
+    if (name.isBlank() || body.isBlank()) return false
+    if (channel !in BroadcastChannels) return false
+    return when (audienceType) {
+        "all" -> true
+        "stage" -> audienceStage in AudienceStages
+        else -> false
     }
 }

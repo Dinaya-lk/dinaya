@@ -30,15 +30,32 @@ Before a Play Store build:
 - Write routes are implemented once on `/api/v1/desktop/*` and re-exported as thin mobile aliases.
 - Device keys are stored in Android Keystore, not web storage.
 
-Native writes now cover walk-in bookings (create / reschedule / cancel), clients, services, staff, locations, availability, review replies, automation toggles, deal pause/reactivate, broadcast send/test, settings profile, and reports range presets (`7d` / `30d` / `90d`).
+### Native writes
 
-Web fallback remains for PayHere checkout, OAuth/provider connect, billing, and API-key management.
+Native writes cover:
+
+- Walk-in bookings: create, **reschedule**, and cancel (slot pick stays in-app).
+- Clients, services, staff, locations, availability.
+- Review replies, automation toggles, settings profile, reports range presets (`7d` / `30d` / `90d`).
+- **Deals:** create and edit natively (service, discount, and time windows), plus pause/reactivate.
+- **Broadcasts:** draft natively (name, channel, body, audience), then send or test from the app.
+
+### Still browser (by design)
+
+The app does not invent these locally. Connect and billing copy reads **Opens dinaya.lk in your browser**:
+
+- PayHere checkout (pending payments deep-link to hosted checkout; no in-app PayHere)
+- Provider OAuth connect
+- Billing (upgrade / downgrade / card)
+- API-key management
+
+Android FCM device registration for new-booking and reminder pushes is still future work.
 
 ### App shell
 
 1. Email/password sign-in through the mobile auth endpoint.
 2. Bottom tabs for Home, Calendar, Bookings, Clients; More sheet for catalog, growth, and configure.
-3. Native create sheets for bookings, clients, services, staff, and locations.
+3. Native create sheets for bookings, clients, services, staff, locations, deals, and broadcasts.
 4. Dinaya web design language: blue primary actions, warm auth background, white cards, slate type, booking status accents, Dinaya.lk mark.
 
 Local project:
