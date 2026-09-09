@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Icon } from "@/components/ui/Icon";
+import { Lock } from "lucide-react";
 import {
   canUseFeature,
   getBusinessPlan,
@@ -28,21 +28,28 @@ export async function ProGate({
   }
 
   const requiredPlan = minimumPlanForFeature(feature);
+  const requiredPlanLabel = planDisplayName(requiredPlan);
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/70 p-5 text-sm dark:border-violet-800/50 dark:bg-violet-950/40">
-      <div className="mb-2 flex items-center gap-2 font-medium text-violet-950 dark:text-violet-100">
-        <span className="inline-flex size-8 items-center justify-center rounded-md bg-violet-600 text-white">
-          <Icon name="stars" className="text-sm" aria-hidden="true" />
-        </span>
-        Upgrade to {planDisplayName(requiredPlan)}
+    <div className="mx-auto max-w-sm py-20 text-center">
+      <div className="relative mx-auto flex size-12 items-center justify-center">
+        <div className="absolute inset-0 rounded-full bg-violet-500/15 blur-md" aria-hidden="true" />
+        <div className="relative flex size-12 items-center justify-center rounded-full bg-linear-to-b from-violet-500 to-violet-600 shadow-[0_1px_1px_rgba(255,255,255,0.4)_inset,0_8px_16px_-6px] shadow-violet-600/50">
+          <Lock className="size-[18px] text-white" aria-hidden="true" strokeWidth={2} />
+        </div>
       </div>
-      <p className="text-violet-900/75 dark:text-violet-200/80">
-        {planFeatureLabel(feature)} is available on Dinaya {planDisplayName(requiredPlan)}.
+      <p className="mt-6 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-violet-600 dark:text-violet-400">
+        Dinaya {requiredPlanLabel}
+      </p>
+      <h2 className="mt-1.5 font-cal text-xl tracking-tight text-foreground">
+        {planFeatureLabel(feature)}
+      </h2>
+      <p className="mx-auto mt-2 text-sm leading-6 text-muted-foreground">
+        Upgrade your plan to unlock this for your business.
       </p>
       <a
         href="/dashboard/billing"
-        className="mt-4 inline-flex rounded-md bg-violet-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-violet-700"
+        className="mt-7 inline-flex min-h-10 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         View plan options
       </a>

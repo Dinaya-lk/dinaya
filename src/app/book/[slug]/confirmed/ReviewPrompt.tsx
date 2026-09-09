@@ -21,9 +21,9 @@ export default function ReviewPrompt({ reviewToken, businessName }: Props) {
 
   if (done) {
     return (
-      <div className="rounded-2xl border bg-white dark:border-neutral-800 dark:bg-neutral-900 p-6 text-center shadow-xs">
+      <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-xs">
         <Icon name="stars" className="mb-2 block text-2xl text-amber-400" />
-        <p className="text-sm font-medium">Thanks for your review!</p>
+        <p className="text-sm font-medium text-foreground">Thanks for your review!</p>
         <p className="mt-1 text-xs text-muted-foreground">It helps others discover {businessName}.</p>
       </div>
     );
@@ -50,10 +50,10 @@ export default function ReviewPrompt({ reviewToken, businessName }: Props) {
   const displayRating = hovered || rating;
 
   return (
-    <div className="rounded-2xl border bg-white dark:border-neutral-800 dark:bg-neutral-900 p-6 shadow-xs">
+    <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
       <div className="mb-3 flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium">How was your experience?</p>
+          <p className="text-sm font-medium text-foreground">How was your experience?</p>
           <p className="mt-0.5 text-xs text-muted-foreground">Leave a quick review for {businessName}</p>
         </div>
         <button
@@ -74,7 +74,7 @@ export default function ReviewPrompt({ reviewToken, businessName }: Props) {
             onMouseLeave={() => setHovered(0)}
             className="text-2xl transition-transform hover:scale-110"
           >
-            <Icon name={n <= displayRating ? "star-fill" : "star"} className={n <= displayRating ? "text-amber-400" : "text-gray-300"} />
+            <Icon name={n <= displayRating ? "star-fill" : "star"} className={n <= displayRating ? "text-amber-400" : "text-muted-foreground/40"} />
           </button>
         ))}
         {rating > 0 && (
@@ -90,7 +90,7 @@ export default function ReviewPrompt({ reviewToken, businessName }: Props) {
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="Share a few words about your experience (optional)…"
-          className="mb-3 w-full resize-none rounded-xl border px-3 py-2.5 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/40"
+          className="mb-3 w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/40"
         />
       )}
 
@@ -106,7 +106,7 @@ export default function ReviewPrompt({ reviewToken, businessName }: Props) {
         </button>
         <button
           onClick={() => setDismissed(true)}
-          className="rounded-xl border px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="rounded-xl border border-border px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           Skip
         </button>

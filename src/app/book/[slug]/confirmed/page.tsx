@@ -9,6 +9,7 @@ import ReviewPrompt from "./ReviewPrompt";
 import PaymentStatusPoller from "./PaymentStatusPoller";
 import AddToCalendar from "./AddToCalendar";
 import SuccessRedirect from "./SuccessRedirect";
+import ConfettiCelebration from "./ConfettiCelebration";
 import { buildClientBookingUrl } from "@/lib/client-tokens";
 import { createReviewToken } from "@/lib/ai/review-links";
 import { getBookingCopy } from "@/lib/i18n";
@@ -17,6 +18,8 @@ import { Icon } from "@/components/ui/Icon";
 import { hasPublicColumn } from "@/lib/dashboard/db-compat";
 import BookingBranding from "@/components/booking/BookingBranding";
 import { canUseFeature, resolveEffectivePlan } from "@/lib/plan";
+import { resolveBookingTheme } from "@/lib/booking-theme";
+import { BookingTheme } from "@/components/booking/BookingTheme";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -29,7 +32,10 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
 
   if (!bookingId) notFound();
 
-  const includeSuccessRedirect = await hasPublicColumn("services", "success_redirect_url");
+  const [includeSuccessRedirect, includeAccentColor] = await Promise.all([
+    hasPublicColumn("services", "success_redirect_url"),
+    hasPublicColumn("businesses", "accent_color"),
+  ]);
 
   const [booking] = await db
     .select({
@@ -47,6 +53,7 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
       businessPlan: businesses.plan,
       businessPlanExpiresAt: businesses.planExpiresAt,
       businessHideDinayaBranding: businesses.hideDinayaBranding,
+      ...(includeAccentColor ? { businessAccentColor: businesses.accentColor } : {}),
       serviceName: services.name,
       ...(includeSuccessRedirect ? { successRedirectUrl: services.successRedirectUrl } : {}),
       staffName: staff.name,
@@ -69,6 +76,12 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
   const hideBranding = Boolean(
     booking.businessHideDinayaBranding && canUseFeature(effectivePlan, "publicBookingPageCustomization"),
   );
+
+  const theme = resolveBookingTheme({
+    accentColor: includeAccentColor
+      ? ((booking as { businessAccentColor?: string | null }).businessAccentColor ?? null)
+      : null,
+  });
 
   const [existingReview] = await db
     .select({ id: reviews.id })
@@ -107,35 +120,35 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
   const timeLine = format(local, "h:mm a");
 
   return (
-    <div className="booking-page-bg flex min-h-dvh items-start justify-center px-4 py-10 md:py-14">
+    <BookingTheme
+      theme={theme}
+      className="booking-page-bg flex min-h-dvh items-start justify-center px-4 py-10 md:py-14"
+    >
+      {isConfirmed ? <ConfettiCelebration /> : null}
       <div className="w-full max-w-md space-y-4">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-xs md:p-8">
-          <div className="mb-4 flex justify-center">
-            <div
-              className={`flex size-12 items-center justify-center rounded-full ${
-                isConfirmed
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-              }`}
-            >
-              <Icon
-                name={isConfirmed ? "check-lg" : "hourglass-split"}
-                className="text-xl"
-              />
-            </div>
+          <div
+            className={`mx-auto flex size-12 items-center justify-center rounded-full ${
+              isConfirmed ? "bg-emerald-500" : "bg-amber-500"
+            }`}
+          >
+            <Icon
+              name={isConfirmed ? "check-lg" : "hourglass-split"}
+              className="text-xl text-white"
+            />
           </div>
 
-          <h1 className="text-center text-xl font-semibold text-foreground md:text-2xl">
+          <h1 className="mt-5 text-center font-cal text-xl tracking-tight text-foreground md:text-2xl">
             {isConfirmed ? copy.confirmedTitle : isPending ? copy.paymentPendingTitle : copy.requestReceivedTitle}
           </h1>
 
           {!isPending ? (
             <div className="mt-5 text-center">
-              <p className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+              <p className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
                 {timeLine}
               </p>
-              <p className="mt-1 text-base text-muted-foreground">{dateLine}</p>
-              <p className="mt-3 text-sm text-foreground">
+              <p className="mt-1.5 text-base text-muted-foreground">{dateLine}</p>
+              <p className="mt-4 text-sm text-foreground">
                 {booking.serviceName}
                 <span className="text-muted-foreground"> · {booking.businessName}</span>
               </p>
@@ -165,28 +178,28 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
             />
           ) : null}
 
-          {(booking.cancellationPolicy || booking.depositPolicy) && !isPending && (
-            <div className="mt-6 space-y-3 rounded-xl border border-border bg-muted/30 p-4 text-left text-xs text-muted-foreground">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {copy.whatHappensNext}
-              </p>
-              {booking.depositPolicy ? (
-                <div>
-                  <p className="font-medium text-foreground">{copy.depositPolicy}</p>
-                  <p className="mt-0.5 whitespace-pre-wrap">{booking.depositPolicy}</p>
-                </div>
-              ) : null}
-              {booking.cancellationPolicy ? (
-                <div>
-                  <p className="font-medium text-foreground">{copy.cancellationPolicy}</p>
-                  <p className="mt-0.5 whitespace-pre-wrap">{booking.cancellationPolicy}</p>
-                </div>
-              ) : null}
-            </div>
-          )}
-
           {!isPending && (
-            <div className="mt-6">
+            <div className="mt-6 space-y-6 border-t border-border pt-6">
+              {(booking.cancellationPolicy || booking.depositPolicy) && (
+                <div className="space-y-4 text-left text-xs text-muted-foreground">
+                  <p className="text-[13px] font-medium text-muted-foreground">
+                    {copy.whatHappensNext}
+                  </p>
+                  {booking.depositPolicy ? (
+                    <div>
+                      <p className="text-[13px] font-medium text-foreground">{copy.depositPolicy}</p>
+                      <p className="mt-1 leading-relaxed whitespace-pre-wrap">{booking.depositPolicy}</p>
+                    </div>
+                  ) : null}
+                  {booking.cancellationPolicy ? (
+                    <div>
+                      <p className="text-[13px] font-medium text-foreground">{copy.cancellationPolicy}</p>
+                      <p className="mt-1 leading-relaxed whitespace-pre-wrap">{booking.cancellationPolicy}</p>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
               <AddToCalendar
                 bookingId={booking.id}
                 slug={slug}
@@ -198,12 +211,13 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
                   addToCalendar: copy.addToCalendar,
                   downloadIcs: copy.downloadIcs,
                   googleCalendar: copy.googleCalendar,
+                  appleCalendar: copy.appleCalendar,
                 }}
               />
             </div>
           )}
 
-          <p className="mt-5 text-center text-xs text-muted-foreground">
+          <p className="mt-6 text-center text-xs text-muted-foreground">
             {copy.refLabel}: <span className="font-mono">{booking.id.slice(0, 8).toUpperCase()}</span>
           </p>
 
@@ -220,7 +234,7 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <Icon name="whatsapp" className="text-base text-emerald-600" />
             {copy.shareOnWhatsApp}
@@ -228,13 +242,13 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
 
           <Link
             href={`/book/${slug}`}
-            className="mt-4 block text-center text-sm booking-text-accent hover:underline"
+            className="mt-2 inline-flex min-h-11 w-full items-center justify-center text-center text-sm booking-text-accent hover:underline"
           >
             ← {copy.backToBooking}
           </Link>
 
           {!hideBranding && (
-            <div className="mt-5 flex justify-center">
+            <div className="mt-6 flex justify-center">
               <BookingBranding copy={copy} businessSlug={slug} />
             </div>
           )}
@@ -244,6 +258,6 @@ export default async function BookingConfirmedPage({ params, searchParams }: Pro
           <ReviewPrompt reviewToken={reviewToken} businessName={booking.businessName} />
         ) : null}
       </div>
-    </div>
+    </BookingTheme>
   );
 }

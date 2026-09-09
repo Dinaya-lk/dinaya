@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Lock } from "lucide-react";
 import { themeEditorFeatureLabel, themeEditorPlanLabel } from "@/lib/plan-client";
 import type { PlanFeature } from "@/lib/plan";
 
@@ -9,22 +9,26 @@ export function ThemeEditorProGateCard({ feature }: { feature: PlanFeature }) {
   const requiredPlan = themeEditorPlanLabel(feature);
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/70 p-4 text-sm dark:border-violet-800/50 dark:bg-violet-950/40">
-      <div className="flex items-center gap-2 font-medium text-violet-950 dark:text-violet-100">
-        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-violet-600 text-white">
-          <Sparkles className="size-4" aria-hidden="true" />
-        </span>
-        Upgrade to {requiredPlan}
+    <div className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-sm">
+      <div className="relative flex size-9 shrink-0 items-center justify-center">
+        <div className="absolute inset-0 rounded-full bg-violet-500/15 blur-sm" aria-hidden="true" />
+        <div className="relative flex size-9 items-center justify-center rounded-full bg-linear-to-b from-violet-500 to-violet-600 shadow-[0_1px_1px_rgba(255,255,255,0.4)_inset,0_4px_10px_-4px] shadow-violet-600/50">
+          <Lock className="size-4 text-white" aria-hidden="true" strokeWidth={2} />
+        </div>
       </div>
-      <p className="mt-2 text-violet-900/75 dark:text-violet-200/80">
-        {themeEditorFeatureLabel(feature)} is available on Dinaya {requiredPlan}.
-      </p>
-      <Link
-        href="/dashboard/billing"
-        className="mt-3 inline-flex min-h-10 items-center rounded-md bg-violet-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-violet-700"
-      >
-        View plan options
-      </Link>
+      <div className="min-w-0 flex-1">
+        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-violet-600 dark:text-violet-400">
+          Dinaya {requiredPlan}
+        </p>
+        <p className="mt-0.5 font-medium text-foreground">{themeEditorFeatureLabel(feature)}</p>
+        <p className="mt-1 text-muted-foreground">Upgrade your plan to unlock this.</p>
+        <Link
+          href="/dashboard/billing"
+          className="mt-3 inline-flex min-h-9 items-center rounded-full bg-primary px-3.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          View plan options
+        </Link>
+      </div>
     </div>
   );
 }
