@@ -9,9 +9,13 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import lk.dinaya.mobile.R
 import lk.dinaya.mobile.data.ThemePreference
 
 /**
@@ -123,65 +127,69 @@ val DinayaRadiusPill = RoundedCornerShape(999.dp)
 val DinayaRadiusSheet = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
 
 // ——— Type —————————————————————————————————————————————————————————————————
-// Site: Inter (font-sans body) + Cal Sans (font-cal display/wordmark).
-// Android ships neither — map the same scale/weight/tracking onto system sans
-// so sizes match the site 1:1. Wordmark uses tight tracking like font-cal.
+// Same pairing as dinaya.lk: Cal Sans (`font-cal`) for display / headings /
+// wordmark / chrome, Inter (`font-sans`) for body copy and form fields.
+// Cal Sans only ships SemiBold; map every Cal weight to that file so Android
+// does not faux-bold it.
+val DinayaCalSans = FontFamily(
+    Font(R.font.cal_sans_semibold, FontWeight.Normal),
+    Font(R.font.cal_sans_semibold, FontWeight.Medium),
+    Font(R.font.cal_sans_semibold, FontWeight.SemiBold),
+    Font(R.font.cal_sans_semibold, FontWeight.Bold),
+)
+
+val DinayaInter = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+    Font(R.font.inter_semibold, FontWeight.SemiBold),
+    Font(R.font.inter_bold, FontWeight.Bold),
+)
+
+private fun calStyle(
+    size: TextUnit,
+    lineHeight: TextUnit,
+    letterSpacing: TextUnit = (-0.3).sp,
+    weight: FontWeight = FontWeight.SemiBold,
+) = TextStyle(
+    fontFamily = DinayaCalSans,
+    fontWeight = weight,
+    fontSize = size,
+    lineHeight = lineHeight,
+    letterSpacing = letterSpacing,
+)
+
+private fun interStyle(
+    size: TextUnit,
+    lineHeight: TextUnit,
+    letterSpacing: TextUnit = 0.sp,
+    weight: FontWeight = FontWeight.Normal,
+) = TextStyle(
+    fontFamily = DinayaInter,
+    fontWeight = weight,
+    fontSize = size,
+    lineHeight = lineHeight,
+    letterSpacing = letterSpacing,
+)
+
+/** Inter 16sp for typed input — web `font-sans` fields, ≥16px on mobile. */
+val DinayaFieldTextStyle = interStyle(16.sp, 24.sp)
+
 val DinayaTypography = Typography(
-    headlineMedium = TextStyle(
-        fontWeight = FontWeight.Bold,
-        fontSize = 30.sp,
-        lineHeight = 36.sp,
-        letterSpacing = (-0.5).sp, // tracking-tight
-    ),
-    headlineSmall = TextStyle(
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
-        lineHeight = 32.sp,
-        letterSpacing = (-0.4).sp,
-    ),
-    titleLarge = TextStyle(
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 28.sp,
-        letterSpacing = (-0.3).sp,
-    ),
-    titleMedium = TextStyle(
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = (-0.1).sp,
-    ),
-    bodyLarge = TextStyle(
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-    ),
-    bodyMedium = TextStyle(
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-    ),
-    bodySmall = TextStyle(
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-    ),
-    labelLarge = TextStyle(
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-    ),
-    labelMedium = TextStyle(
-        fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-    ),
-    labelSmall = TextStyle(
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.9.sp, // uppercase 0.08em labels (StatCard)
-    ),
+    displayLarge = calStyle(57.sp, 64.sp, (-0.8).sp),
+    displayMedium = calStyle(45.sp, 52.sp, (-0.6).sp),
+    displaySmall = calStyle(36.sp, 44.sp, (-0.5).sp),
+    headlineLarge = calStyle(32.sp, 40.sp, (-0.5).sp),
+    headlineMedium = calStyle(30.sp, 36.sp, (-0.5).sp, FontWeight.Bold),
+    headlineSmall = calStyle(24.sp, 32.sp, (-0.4).sp),
+    titleLarge = calStyle(20.sp, 28.sp, (-0.3).sp),
+    titleMedium = calStyle(16.sp, 24.sp, (-0.1).sp),
+    titleSmall = calStyle(14.sp, 20.sp, (-0.1).sp),
+    bodyLarge = calStyle(16.sp, 24.sp, 0.sp, FontWeight.SemiBold),
+    bodyMedium = interStyle(14.sp, 20.sp),
+    bodySmall = interStyle(12.sp, 16.sp),
+    labelLarge = calStyle(14.sp, 20.sp, 0.sp),
+    labelMedium = calStyle(12.sp, 16.sp, 0.sp, FontWeight.Medium),
+    labelSmall = calStyle(11.sp, 16.sp, 0.9.sp, FontWeight.Medium),
 )
 
 // ——— Status ———————————————————————————————————————————————————————————————

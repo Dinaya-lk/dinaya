@@ -279,10 +279,17 @@ internal fun ReviewsScreen(
                     value = replyText,
                     onValueChange = { replyText = it },
                     label = { Text("Your reply") },
-                    placeholder = { Text("Thank you for visiting us…") },
+                    placeholder = {
+                        Text(
+                            "Thank you for visiting us…",
+                            style = DinayaFieldTextStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    },
                     minLines = 3,
                     maxLines = 6,
                     shape = DinayaRadiusCard,
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier
                         .fillMaxWidth()
                         .semantics { contentDescription = "Review reply input" },
@@ -1413,6 +1420,7 @@ internal fun BroadcastsScreen(
                     label = { Text("Test phone (e.g. 0771234567)") },
                     singleLine = true,
                     shape = DinayaRadiusButton,
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Test send phone input" },
                 )
                 OutlinedButton(
@@ -1528,10 +1536,17 @@ private fun BroadcastCreateSheet(
                 OutlinedTextField(
                     value = body,
                     onValueChange = { body = it },
-                    placeholder = { Text("Write the message clients will receive…") },
+                    placeholder = {
+                        Text(
+                            "Write the message clients will receive…",
+                            style = DinayaFieldTextStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    },
                     minLines = 4,
                     maxLines = 8,
                     shape = DinayaRadiusCard,
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier
                         .fillMaxWidth()
                         .semantics { contentDescription = "Broadcast message body" },

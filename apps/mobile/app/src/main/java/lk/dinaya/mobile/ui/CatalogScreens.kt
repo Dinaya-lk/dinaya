@@ -430,7 +430,13 @@ internal fun CatalogField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+            placeholder = {
+                Text(
+                    placeholder,
+                    style = DinayaFieldTextStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            },
             singleLine = singleLine,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             shape = DinayaRadiusButton,
@@ -443,7 +449,7 @@ internal fun CatalogField(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 cursorColor = MaterialTheme.colorScheme.primary,
             ),
-            textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+            textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -845,7 +851,13 @@ private fun CatalogClientDetailSheet(
                 OutlinedTextField(
                     value = noteDraft,
                     onValueChange = onNoteChange,
-                    placeholder = { Text("Add a note about ${detailName.split(" ").firstOrNull().orEmpty()}…") },
+                    placeholder = {
+                        Text(
+                            "Add a note about ${detailName.split(" ").firstOrNull().orEmpty()}…",
+                            style = DinayaFieldTextStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    },
                     shape = DinayaRadiusButton,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -853,7 +865,7 @@ private fun CatalogClientDetailSheet(
                         focusedContainerColor = MaterialTheme.colorScheme.surface,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     ),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                 )

@@ -1,0 +1,9 @@
+Dinaya Android ships two OFL typefaces to match dinaya.lk:
+
+- Cal Sans SemiBold — display, headings, wordmark, nav, buttons
+  Source: src/fonts/CalSans-SemiBold.woff2 (converted to TTF)
+  Copyright 2021 The Cal Sans Project Authors (https://github.com/calcom/font)
+
+- Inter Regular / Medium / SemiBold / Bold — body copy and form fields
+  Source: Inter 4.1 extras/ttf from https://github.com/rsms/inter
+  See OFL-Inter.txt

@@ -118,6 +118,33 @@ describe("Android merchant shell vs web dashboard", () => {
     expect(themeKt).toContain("val DinayaPrimary = Color(0xFF2563EB)");
   });
 
+  it("ships Cal Sans for headings and Inter for body, matching the site type stack", () => {
+    const fontDir = resolve(process.cwd(), "apps/mobile/app/src/main/res/font");
+    expect(existsSync(join(fontDir, "cal_sans_semibold.ttf"))).toBe(true);
+    expect(existsSync(join(fontDir, "inter_regular.ttf"))).toBe(true);
+    expect(existsSync(join(fontDir, "inter_medium.ttf"))).toBe(true);
+    expect(existsSync(join(fontDir, "inter_semibold.ttf"))).toBe(true);
+    expect(existsSync(join(fontDir, "inter_bold.ttf"))).toBe(true);
+    expect(themeKt).toContain("val DinayaCalSans");
+    expect(themeKt).toContain("val DinayaInter");
+    expect(themeKt).toContain("R.font.cal_sans_semibold");
+    expect(themeKt).toContain("R.font.inter_regular");
+    expect(themeKt).toContain("headlineMedium = calStyle");
+    expect(themeKt).toContain("bodyLarge = calStyle");
+    expect(themeKt).toContain("bodyMedium = interStyle");
+    expect(themeKt).toContain("val DinayaFieldTextStyle");
+    expect(appKt).toContain("fontFamily = DinayaCalSans");
+    expect(readWorkspace("apps/mobile/app/src/main/res/values/styles.xml")).toContain(
+      "@font/cal_sans_semibold",
+    );
+    const fieldSources = kotlinUiSources().join("\n");
+    const fieldBlocks = fieldSources.split("OutlinedTextField(").slice(1);
+    expect(fieldBlocks.length).toBeGreaterThan(0);
+    for (const block of fieldBlocks) {
+      expect(block).toContain("DinayaFieldTextStyle");
+    }
+  });
+
   it("keeps cancelled bookings slate, matching dashboard-status.ts", () => {
     expect(themeKt).toContain("cancelled");
     expect(themeKt).toContain("Color(0xFFF1F5F9)");

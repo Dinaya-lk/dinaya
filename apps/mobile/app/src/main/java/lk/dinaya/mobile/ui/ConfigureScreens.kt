@@ -470,6 +470,7 @@ internal fun SettingsScreen(
                     label = { Text("Business name") },
                     singleLine = true,
                     shape = DinayaRadiusButton,
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Business name input" },
                 )
                 OutlinedTextField(
@@ -478,6 +479,7 @@ internal fun SettingsScreen(
                     label = { Text("Phone") },
                     singleLine = true,
                     shape = DinayaRadiusButton,
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Business phone input" },
                 )
                 OutlinedTextField(
@@ -485,6 +487,7 @@ internal fun SettingsScreen(
                     onValueChange = { address = it },
                     label = { Text("Address") },
                     shape = DinayaRadiusButton,
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Business address input" },
                 )
                 Button(

@@ -950,7 +950,13 @@ internal fun DashboardTopChrome(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchChange,
-            placeholder = { Text("Search bookings, clients…") },
+            placeholder = {
+                Text(
+                    "Search bookings, clients…",
+                    style = DinayaFieldTextStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Filled.Search,
@@ -978,7 +984,7 @@ internal fun DashboardTopChrome(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 cursorColor = MaterialTheme.colorScheme.primary,
             ),
-            textStyle = MaterialTheme.typography.bodyMedium.copy(
+            textStyle = DinayaFieldTextStyle.copy(
                 color = MaterialTheme.colorScheme.onBackground,
             ),
             modifier = Modifier
@@ -2689,7 +2695,7 @@ internal fun BottomTabCell(
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
             color = content,
             maxLines = 1,
@@ -3254,7 +3260,13 @@ internal fun AuthField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+            placeholder = {
+                Text(
+                    label,
+                    style = DinayaFieldTextStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            },
             singleLine = true,
             visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
             trailingIcon = if (isPassword) {
@@ -3278,7 +3290,7 @@ internal fun AuthField(
                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 cursorColor = MaterialTheme.colorScheme.primary,
             ),
-            textStyle = MaterialTheme.typography.bodyMedium.copy(
+            textStyle = DinayaFieldTextStyle.copy(
                 color = MaterialTheme.colorScheme.onBackground,
             ),
             modifier = Modifier
@@ -3307,6 +3319,7 @@ internal fun BrandLockup(
             val brandText = buildAnnotatedString {
                 withStyle(
                     SpanStyle(
+                        fontFamily = DinayaCalSans,
                         color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = (-0.4).sp,
@@ -3316,6 +3329,7 @@ internal fun BrandLockup(
                 }
                 withStyle(
                     SpanStyle(
+                        fontFamily = DinayaCalSans,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold,
                     ),
@@ -3373,7 +3387,13 @@ internal fun BookingConfirmStatusDialog(
                     OutlinedTextField(
                         value = cancelReason,
                         onValueChange = onReasonChange,
-                        placeholder = { Text("Reason (optional)") },
+                        placeholder = {
+                            Text(
+                                "Reason (optional)",
+                                style = DinayaFieldTextStyle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            )
+                        },
                         singleLine = true,
                         shape = DinayaRadiusButton,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -3381,7 +3401,7 @@ internal fun BookingConfirmStatusDialog(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline,
                             cursorColor = MaterialTheme.colorScheme.primary,
                         ),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        textStyle = DinayaFieldTextStyle.copy(
                             color = MaterialTheme.colorScheme.onSurface,
                         ),
                         modifier = Modifier.fillMaxWidth(),
