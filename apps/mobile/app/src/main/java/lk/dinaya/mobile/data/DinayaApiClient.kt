@@ -1195,7 +1195,7 @@ private fun labelsFor(module: String) = desktopModuleLabels[module]
         webPath = "/dashboard",
     )
 
-private fun JSONObject.toDesktopModulePayload(moduleKey: String): DesktopModulePayload {
+internal fun JSONObject.toDesktopModulePayload(moduleKey: String): DesktopModulePayload {
     val labels = labelsFor(moduleKey)
     val genericMetrics = optJSONArray("metrics")
     val genericItems = optJSONArray("items")

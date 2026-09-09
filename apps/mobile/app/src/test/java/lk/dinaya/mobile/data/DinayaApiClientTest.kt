@@ -742,4 +742,73 @@ class DinayaApiClientTest {
         assertEquals(false, body.has("status"))
         assertEquals(false, body.has("clientName"))
     }
+
+    @Test
+    fun toDesktopModulePayloadKeepsAndroidModuleShape() {
+        val json = org.json.JSONObject(
+            """
+            {
+                "title": "Deals",
+                "summary": "Deal status, slot usage, and impressions.",
+                "emptyState": "No deals created yet.",
+                "webPath": "/dashboard/deals",
+                "items": [
+                    { "id": "deal_1", "title": "20% colour", "subtitle": "Colour", "status": "active" }
+                ],
+                "metrics": [
+                    { "label": "Active", "value": "1", "tone": "cobalt" }
+                ]
+            }
+            """.trimIndent(),
+        )
+
+        val payload = json.toDesktopModulePayload("deals")
+        assertEquals("Deals", payload.title)
+        assertEquals(1, payload.items.size)
+        assertEquals("20% colour", payload.items[0].title)
+        assertEquals("active", payload.items[0].status)
+        assertEquals("Active", payload.metrics[0].label)
+    }
+
+    @Test
+    fun toDesktopModulePayloadReadsProductionDesktopListRows() {
+        val deals = org.json.JSONObject(
+            """
+            {
+                "filters": { "limit": 80, "q": "", "status": "all" },
+                "rows": [
+                    { "id": "deal_9", "serviceName": "Haircut", "discountPercent": 20, "displayStatus": "active" }
+                ],
+                "summary": { "activeDeals": 1, "totalDeals": 1 },
+                "serverTime": "2026-09-09T12:00:00Z",
+                "webUrl": "/dashboard/deals"
+            }
+            """.trimIndent(),
+        )
+        val dealPayload = deals.toDesktopModulePayload("deals")
+        assertEquals("Deals", dealPayload.title)
+        assertEquals("/dashboard/deals", dealPayload.webPath)
+        assertEquals(1, dealPayload.items.size)
+        assertEquals("Haircut", dealPayload.items[0].title)
+        assertEquals("active", dealPayload.items[0].status)
+        assertEquals(
+            setOf("Active deals", "Total deals"),
+            dealPayload.metrics.map { it.label }.toSet(),
+        )
+
+        val services = org.json.JSONObject(
+            """
+            {
+                "rows": [
+                    { "id": "svc_1", "name": "Haircut", "durationMinutes": 30, "priceLkr": 1500 }
+                ],
+                "summary": { "totalServices": 1, "activeServices": 1 },
+                "webUrl": "/dashboard/services"
+            }
+            """.trimIndent(),
+        )
+        val servicePayload = services.toDesktopModulePayload("services")
+        assertEquals("Haircut", servicePayload.items[0].title)
+        assertEquals("svc_1", servicePayload.items[0].id)
+    }
 }
