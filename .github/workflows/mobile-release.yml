@@ -1,0 +1,52 @@
+name: Mobile Release
+
+on:
+  push:
+    tags:
+      - "mobile-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Test and assemble debug APK
+        working-directory: apps/mobile
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon
+
+      - name: Name the APK
+        run: |
+          mkdir -p dist
+          cp apps/mobile/app/build/outputs/apk/debug/app-debug.apk \
+            dist/dinaya-mobile-0.3.0-debug.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/dinaya-mobile-0.3.0-debug.apk
+          name: Dinaya Mobile 0.3.0
+          generate_release_notes: true
+          prerelease: true
+          body: |
+            Sideloadable **debug** APK for the Dinaya merchant Android app (`lk.dinaya.mobile`).
+
+            - Version: **0.3.0** (versionCode 3)
+            - Signed with the Android debug keystore (not Play Store / production signing)
+            - API host: `https://dinaya-lk.vercel.app`
+            - Install: download the APK, enable Install unknown apps, then open the file on the phone
+
+            Native writes (walk-ins, catalog, deals, broadcasts) need the matching `/api/v1/mobile/*` server routes. Until that lands on production, the app falls back to `/api/v1/desktop/*`.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
