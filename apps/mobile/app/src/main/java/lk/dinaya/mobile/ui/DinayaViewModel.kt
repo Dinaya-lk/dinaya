@@ -38,6 +38,7 @@ import lk.dinaya.mobile.data.UpdateBookingRequest
 import lk.dinaya.mobile.data.combineDateTimeToIso
 import lk.dinaya.mobile.data.defaultApiBaseUrl
 import lk.dinaya.mobile.data.friendlyConnectionError
+import lk.dinaya.mobile.data.isFounderDemoEmail
 import lk.dinaya.mobile.data.isEmulatorDevice
 import lk.dinaya.mobile.data.isLoopbackBaseUrl
 import lk.dinaya.mobile.data.CalendarPayload
@@ -691,6 +692,38 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
             else -> {
                 if (section.desktopModule != null) {
                     loadSectionModule(section.key, force = true)
+                }
+            }
+        }
+    }
+
+    fun seedFounderDemo() {
+        val session = uiState.value.session ?: return
+        if (!isFounderDemoEmail(session.userEmail)) {
+            _uiState.update {
+                it.copy(errorMessage = "Demo data is only for the founder testing account.")
+            }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(catalogBusy = true, errorMessage = null) }
+            runCatching {
+                newClient(session.baseUrl).seedFounderDemo(session.deviceKey)
+            }.onSuccess { raw ->
+                val message = raw.optString("message").ifBlank {
+                    "Demo data loaded. Open Home, Bookings, and More to try each screen."
+                }
+                _uiState.update { it.copy(catalogBusy = false, actionMessage = message) }
+                refresh()
+                loadBookingsForTab(uiState.value.bookingsTab)
+                loadCalendar()
+                refreshSelectedSection()
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        catalogBusy = false,
+                        errorMessage = error.message ?: "Could not load demo data.",
+                    )
                 }
             }
         }
