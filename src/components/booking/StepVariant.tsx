@@ -21,7 +21,7 @@ export default function StepVariant({ service, selectedId, copy, onSelect }: Pro
   const variants = service.priceVariants ?? [];
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-2 md:px-6 lg:px-8 lg:py-6">
+    <div className="mx-auto w-full max-w-2xl px-4 py-2 md:px-6 md:py-6 lg:px-8">
       <div className="mb-6 rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
         <p className="text-base font-semibold text-foreground md:text-sm">{service.name}</p>
       </div>

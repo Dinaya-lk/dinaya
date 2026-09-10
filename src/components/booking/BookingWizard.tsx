@@ -725,52 +725,36 @@ function BookingWizardInner({
               />
             </div>
           ) : showVariantStep ? (
-            <>
-              <div className="border-b border-border py-3 lg:hidden">
-                <BookingChoiceSummary
-                  serviceName={state.service?.name}
-                  stepLabel={copy.chooseOption}
-                />
-              </div>
-              <StepVariant
-                service={state.service!}
-                selectedId={state.priceVariantId}
-                copy={copy}
-                onSelect={selectPriceVariant}
-              />
-            </>
+            <StepVariant
+              service={state.service!}
+              selectedId={state.priceVariantId}
+              copy={copy}
+              onSelect={selectPriceVariant}
+            />
           ) : showStaffStep ? (
-            <>
-              <div className="border-b border-border py-3 lg:hidden">
-                <BookingChoiceSummary
-                  serviceName={state.service?.name}
-                  stepLabel={copy.chooseTeam}
-                />
-              </div>
-              <StepStaff
-                service={state.service!}
-                allStaff={staff}
-                staffServiceMap={staffServiceMap}
-                staffLocationMap={staffLocationMap}
-                locationId={state.location?.id}
-                selected={state.staff}
-                anyStaffSelected={anyStaff}
-                copy={copy}
-                onSelect={(s) => {
-                  setAnyStaff(false);
-                  update({ staff: s });
-                }}
-                onSelectAny={() => {
-                  setAnyStaff(true);
-                  update({ staff: null });
-                }}
-              />
-            </>
+            <StepStaff
+              service={state.service!}
+              allStaff={staff}
+              staffServiceMap={staffServiceMap}
+              staffLocationMap={staffLocationMap}
+              locationId={state.location?.id}
+              selected={state.staff}
+              anyStaffSelected={anyStaff}
+              copy={copy}
+              onSelect={(s) => {
+                setAnyStaff(false);
+                update({ staff: s });
+              }}
+              onSelectAny={() => {
+                setAnyStaff(true);
+                update({ staff: null });
+              }}
+            />
           ) : (
             <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-0 lg:grid-cols-[minmax(14rem,16rem)_minmax(0,1fr)] lg:items-stretch lg:divide-x lg:divide-border xl:grid-cols-[minmax(15rem,17rem)_minmax(0,1fr)]">
               <BookingPanel
                 area="meta"
-                className="border-b border-border pb-3 pt-0 lg:sticky lg:top-0 lg:z-1 lg:self-start lg:border-0 lg:px-5 lg:pb-6 lg:pt-6 xl:px-6"
+                className="border-b border-border pb-3 pt-0 md:border-0 md:px-5 md:pb-6 md:pt-6 lg:sticky lg:top-0 lg:z-1 lg:self-start xl:px-6"
                 {...panelMotion}
               >
                 <ServiceMetaPanel {...metaPanelProps} />
@@ -799,7 +783,7 @@ function BookingWizardInner({
                   </div>
                 ) : null}
                 {!showContactForm && canPickSlots && !selectedSlot ? (
-                  <div className="border-b border-border px-0 pb-3 pt-3 lg:hidden">
+                  <div className="border-b border-border px-0 pb-3 pt-3 md:hidden">
                     <h2 className="font-cal text-xl tracking-tight text-foreground">
                       {copy.pickDateTime}
                     </h2>

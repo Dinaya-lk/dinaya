@@ -47,7 +47,7 @@ export default function StepStaff({
   const eligible = getEligibleStaff(allStaff, staffServiceMap, service.id, staffLocationMap, locationId);
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-2 md:px-6 lg:px-8 lg:py-6">
+    <div className="mx-auto w-full max-w-2xl px-4 py-2 md:px-6 md:py-6 lg:px-8">
       <div className="mb-6 rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
         <p className="text-base font-semibold text-foreground md:text-sm">{service.name}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-muted-foreground md:text-sm">

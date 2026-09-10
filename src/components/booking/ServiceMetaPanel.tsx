@@ -111,7 +111,7 @@ export function ServiceMetaPanel({
     <div className="flex min-w-0 flex-col">
       {/* Mobile compact strip — v2: logo + service + price; date picker is the hero */}
       {service ? (
-        <div className="lg:hidden">
+        <div className="md:hidden">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 shrink-0" data-size="lg">
               {business.logoUrl ? (
@@ -161,7 +161,7 @@ export function ServiceMetaPanel({
       ) : null}
 
       {/* Desktop / tablet full meta column */}
-      <div className={cn(service ? "hidden lg:block" : "block")}>
+      <div className={cn(service ? "hidden md:block" : "block")}>
         <div className="flex items-start gap-3">
           <Avatar className="size-10 shrink-0" data-size="lg">
             {business.logoUrl ? (
@@ -205,7 +205,7 @@ export function ServiceMetaPanel({
             <m.div
               key="service-info"
               {...serviceMotion}
-              className="mt-6 min-w-0 border-t border-border/70 pt-4"
+              className="mt-4 min-w-0 border-t border-border/70 pt-3"
             >
               {!lockServiceSelection && onChangeService ? (
                 <button

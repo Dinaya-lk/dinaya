@@ -311,8 +311,8 @@ export default function StepDateTime({
         </p>
       ) : null}
 
-      <div className="flex min-w-0 w-full max-w-full flex-col lg:grid lg:min-h-96 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,0.95fr)] lg:divide-x lg:divide-border/80 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,0.95fr)]">
-        <section className="min-w-0 flex-1 py-0 lg:pr-6">
+      <div className="flex min-w-0 w-full max-w-full flex-col md:grid md:min-h-96 md:grid-cols-[minmax(0,1fr)_minmax(15rem,0.95fr)] md:divide-x md:divide-border/80 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,0.95fr)]">
+        <section className="min-w-0 flex-1 py-0 md:pr-6">
           <div className="mb-3 flex items-center justify-between gap-2 md:mb-4">
             {!hideHeading ? (
               <p className="text-sm font-medium text-foreground md:sr-only">{copy.chooseDate}</p>
@@ -358,20 +358,7 @@ export default function StepDateTime({
             )}
           </div>
 
-          <div className="hidden min-w-0 md:block lg:hidden">
-            <MonthCalendar
-              selectedDate={selectedDate}
-              minDate={today}
-              maxDate={maxDate}
-              dayStatus={monthDayStatus}
-              nextAvailableDate={showNextAvailable ? nextAvailable?.date : undefined}
-              onMonthChange={handleMonthChange}
-              onSelect={onDateChange}
-              size="comfortable"
-            />
-          </div>
-
-          <div className="hidden min-w-0 lg:block">
+          <div className="hidden min-w-0 md:block">
             <MonthCalendar
               selectedDate={selectedDate}
               minDate={today}
@@ -386,7 +373,7 @@ export default function StepDateTime({
         </section>
 
         {!hideSlots ? (
-          <section className="min-w-0 flex-1 border-t border-border/80 py-4 lg:flex lg:min-h-0 lg:flex-col lg:border-t-0 lg:py-0 lg:pl-6">
+          <section className="min-w-0 flex-1 border-t border-border/80 py-4 md:flex md:min-h-0 md:flex-col md:border-t-0 md:py-0 md:pl-6">
             {compactDateHeading ? (
                 <div className="mb-3 flex items-baseline justify-between gap-2 md:mb-4">
                   <h3 className="text-sm font-semibold text-foreground md:text-base">{compactDateHeading}</h3>
@@ -414,10 +401,10 @@ export default function StepDateTime({
                 <p className="py-6 text-center text-sm text-muted-foreground">{copy.selectDate}</p>
               ) : (
                 <>
-                  <div className="lg:hidden">
+                  <div className="md:hidden">
                     <TimeSlotGrid {...slotPanelProps} />
                   </div>
-                  <div className="scrollbar-hide hidden min-w-0 w-full max-h-[min(30rem,calc(100vh-14rem))] overflow-y-auto overflow-x-hidden pb-4 lg:block">
+                  <div className="scrollbar-hide hidden min-w-0 w-full max-h-[min(30rem,calc(100vh-14rem))] overflow-y-auto overflow-x-hidden pb-4 md:block">
                     <SlotListPanel {...slotPanelProps} />
                   </div>
                 </>

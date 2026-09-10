@@ -98,7 +98,11 @@ export function useBookingUrlSync(input: {
       },
       { replace: true },
     );
-  }, [input.date, input.slotStartUtc, input.staffId, input.variantId, input.dealId, input.enabled, setParams]);
+    // setParams is intentionally omitted: its identity changes on every URL update
+    // (it closes over searchParams from useSearchParams), which would re-trigger this
+    // effect and loop router.replace forever. Only the actual booking state should re-sync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input.date, input.slotStartUtc, input.staffId, input.variantId, input.dealId, input.enabled]);
 }
 
 /** Remove contact PII from the URL after embed prefill; sessionStorage handles recovery. */
