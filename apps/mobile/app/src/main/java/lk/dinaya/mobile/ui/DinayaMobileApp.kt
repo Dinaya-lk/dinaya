@@ -542,10 +542,11 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             ErrorBanner(state.errorMessage, onDismiss = viewModel::clearError)
             ActionBanner(state.actionMessage, onDismiss = viewModel::clearActionMessage)
 
+            val reduceMotion = LocalReduceMotion.current
             AnimatedContent(
                 targetState = selectedSection.key,
                 transitionSpec = {
-                    dinayaSectionEnter().togetherWith(dinayaSectionExit())
+                    dinayaSectionEnter(reduceMotion).togetherWith(dinayaSectionExit(reduceMotion))
                 },
                 label = "sectionTransition",
             ) { sectionKey ->

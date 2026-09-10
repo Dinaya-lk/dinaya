@@ -53,9 +53,8 @@ fun dinayaNoBounceSpring() = spring<Float>(
     stiffness = Spring.StiffnessMedium,
 )
 
-@Composable
-fun dinayaSectionEnter(): EnterTransition {
-    if (LocalReduceMotion.current) return fadeIn(animationSpec = tween(0))
+fun dinayaSectionEnter(reduceMotion: Boolean = false): EnterTransition {
+    if (reduceMotion) return fadeIn(animationSpec = tween(0))
     return fadeIn(animationSpec = tween(180)) + slideInHorizontally(
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
@@ -65,9 +64,8 @@ fun dinayaSectionEnter(): EnterTransition {
     )
 }
 
-@Composable
-fun dinayaSectionExit(): ExitTransition {
-    if (LocalReduceMotion.current) return fadeOut(animationSpec = tween(0))
+fun dinayaSectionExit(reduceMotion: Boolean = false): ExitTransition {
+    if (reduceMotion) return fadeOut(animationSpec = tween(0))
     return fadeOut(animationSpec = tween(150))
 }
 

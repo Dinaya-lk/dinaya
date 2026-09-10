@@ -50,6 +50,7 @@ import lk.dinaya.mobile.data.toCalendarPayload
 import lk.dinaya.mobile.data.toDesktopModulePayload
 import lk.dinaya.mobile.data.toOverviewPayload
 import lk.dinaya.mobile.data.ThemePreference
+import org.json.JSONObject
 
 data class ModuleContentState(
     val isLoading: Boolean = false,
@@ -715,7 +716,7 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         if (!force && existing?.payload != null) return
         if (!force && existing?.payload == null) {
             val cached = runCatching {
-                section.desktopModule?.let { mobileCache.loadModule(it)?.toDesktopModulePayload(it) }
+                mobileCache.loadModule(module)?.toDesktopModulePayload(module)
             }.getOrNull()
             if (cached != null) {
                 _uiState.update {
