@@ -836,4 +836,79 @@ class DinayaApiClientTest {
         assertEquals(false, message.contains("okhttp", ignoreCase = true))
         assertEquals("Couldn't reach Dinaya. Check your internet and try again.", message)
     }
+
+    @Test
+    fun toDesktopModulePayloadReadsReviewPublishedAndRating() {
+        val json = org.json.JSONObject(
+            """
+            {
+                "title": "Reviews",
+                "items": [
+                    { "id": "r1", "title": "Kasun", "status": "5/5", "published": true, "rating": 5 }
+                ]
+            }
+            """.trimIndent(),
+        )
+        val payload = json.toDesktopModulePayload("reviews")
+        assertEquals(true, payload.items[0].published)
+        assertEquals(5, payload.items[0].rating)
+        assertEquals("5/5", payload.items[0].status)
+    }
+
+    @Test
+    fun toDesktopModulePayloadReadsReviewRowsIsPublished() {
+        val json = org.json.JSONObject(
+            """
+            {
+                "rows": [
+                    { "id": "r1", "clientName": "Nimal", "comment": "Great cut", "rating": 4, "isPublished": false }
+                ]
+            }
+            """.trimIndent(),
+        )
+        val payload = json.toDesktopModulePayload("reviews")
+        assertEquals(false, payload.items[0].published)
+        assertEquals(4, payload.items[0].rating)
+        assertEquals("hidden", payload.items[0].status)
+    }
+
+    @Test
+    fun toDesktopModulePayloadReadsSettingsBusinessPolicies() {
+        val json = org.json.JSONObject(
+            """
+            {
+                "business": {
+                    "phone": "0771234567",
+                    "address": "Kandy",
+                    "cancellationPolicy": "Call 12 hours ahead.",
+                    "depositPolicy": "Deposits are non-refundable."
+                },
+                "devices": [
+                    { "id": "k1", "deviceName": "Pixel", "keyType": "mobile" }
+                ]
+            }
+            """.trimIndent(),
+        )
+        val payload = json.toDesktopModulePayload("settings")
+        assertEquals("0771234567", payload.businessPhone)
+        assertEquals("Kandy", payload.businessAddress)
+        assertEquals("Call 12 hours ahead.", payload.cancellationPolicy)
+        assertEquals("Deposits are non-refundable.", payload.depositPolicy)
+        assertEquals("Pixel", payload.items[0].title)
+    }
+
+    @Test
+    fun layeredCacheStorePromotesDiskHitsIntoMemory() {
+        val memory = InMemoryCacheStore()
+        val disk = InMemoryCacheStore()
+        val layered = LayeredCacheStore(memory, disk)
+        disk.put("cache_module_reviews", """{"title":"Reviews"}""")
+        assertEquals("""{"title":"Reviews"}""", layered.get("cache_module_reviews"))
+        assertEquals("""{"title":"Reviews"}""", memory.get("cache_module_reviews"))
+    }
+
+    @Test
+    fun moduleCacheKeyIsStable() {
+        assertEquals("cache_module_reviews", MobileCache.moduleKey("reviews"))
+    }
 }

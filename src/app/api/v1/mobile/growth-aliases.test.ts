@@ -52,11 +52,17 @@ import { GET as desktopMarketingGET, PATCH as desktopMarketingPATCH } from "@/ap
 import { GET as mobileMarketingGET, PATCH as mobileMarketingPATCH } from "@/app/api/v1/mobile/marketing/[id]/route";
 import { GET as desktopIntegrationGET } from "@/app/api/v1/desktop/integrations/[id]/route";
 import { GET as mobileIntegrationGET } from "@/app/api/v1/mobile/integrations/[id]/route";
+import { POST as desktopReviewGenerateReplyPOST } from "@/app/api/v1/desktop/reviews/[id]/generate-reply/route";
+import { POST as mobileReviewGenerateReplyPOST } from "@/app/api/v1/mobile/reviews/[id]/generate-reply/route";
 
 describe("mobile growth and configure aliases", () => {
   it("aliases review detail reads and owner replies", () => {
     expect(mobileReviewGET).toBe(desktopReviewGET);
     expect(mobileReviewPATCH).toBe(desktopReviewPATCH);
+  });
+
+  it("aliases AI review reply generation", () => {
+    expect(mobileReviewGenerateReplyPOST).toBe(desktopReviewGenerateReplyPOST);
   });
 
   it("aliases automation detail reads and toggles", () => {

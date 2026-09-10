@@ -95,7 +95,16 @@ class DinayaApiClient(
     }
 
     suspend fun fetchDesktopModule(deviceKey: String, module: String): DesktopModulePayload = withContext(Dispatchers.IO) {
-        request("GET", mobileModulePath(module), deviceKey = deviceKey).toDesktopModulePayload(module)
+        try {
+            val raw = request("GET", mobileModulePath(module), deviceKey = deviceKey)
+            cache?.saveModule(module, raw)
+            raw.toDesktopModulePayload(module)
+        } catch (e: DinayaApiException) {
+            throw e
+        } catch (e: Exception) {
+            coroutineContext.ensureActive()
+            cache?.loadModule(module)?.toDesktopModulePayload(module) ?: throw e
+        }
     }
 
     suspend fun updateBookingStatus(deviceKey: String, bookingId: String, status: String): StatusUpdateResult =
@@ -268,6 +277,26 @@ class DinayaApiClient(
             )
         }
 
+    suspend fun patchReviewPublished(deviceKey: String, reviewId: String, isPublished: Boolean): JSONObject =
+        withContext(Dispatchers.IO) {
+            request(
+                method = "PATCH",
+                path = mobilePath("reviews/$reviewId"),
+                deviceKey = deviceKey,
+                body = JSONObject().put("isPublished", isPublished),
+            )
+        }
+
+    suspend fun generateReviewReply(deviceKey: String, reviewId: String): String = withContext(Dispatchers.IO) {
+        val raw = request(
+            method = "POST",
+            path = mobilePath("reviews/$reviewId/generate-reply"),
+            deviceKey = deviceKey,
+            body = JSONObject(),
+        )
+        raw.optString("reply").ifBlank { throw DinayaApiException("Could not generate a reply.") }
+    }
+
     suspend fun patchAutomationActive(deviceKey: String, ruleId: String, isActive: Boolean): JSONObject =
         withContext(Dispatchers.IO) {
             val body = JSONObject().put("isActive", isActive)
@@ -305,12 +334,16 @@ class DinayaApiClient(
         phone: String? = null,
         address: String? = null,
         directoryListed: Boolean? = null,
+        cancellationPolicy: String? = null,
+        depositPolicy: String? = null,
     ): JSONObject = withContext(Dispatchers.IO) {
         val business = JSONObject()
         if (name != null) business.put("name", name)
         if (phone != null) business.put("phone", phone)
         if (address != null) business.put("address", address)
         if (directoryListed != null) business.put("directoryListed", directoryListed)
+        if (cancellationPolicy != null) business.put("cancellationPolicy", cancellationPolicy)
+        if (depositPolicy != null) business.put("depositPolicy", depositPolicy)
         val body = JSONObject().put("business", business)
         request(
             method = "PATCH",
@@ -629,9 +662,9 @@ class DinayaApiClient(
             connection.connectTimeout = 12_000
             connection.readTimeout = 25_000
             connection.instanceFollowRedirects = true
-            connection.useCaches = false
+            connection.useCaches = true
             connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("Connection", "close")
+            connection.setRequestProperty("Connection", "keep-alive")
             connection.setRequestProperty("X-Dinaya-Mobile", "1")
             if (path.startsWith("/api/v1/desktop/")) {
                 connection.setRequestProperty("X-Dinaya-Desktop", "1")
@@ -653,11 +686,14 @@ class DinayaApiClient(
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText() }.orEmpty()
             if (status !in 200..299) {
+                runCatching { connection.disconnect() }
                 throw DinayaApiException(parseErrorMessage(text), status)
             }
+            // Leave successful connections open so HttpURLConnection can reuse keep-alive.
             return if (text.isBlank()) JSONObject() else JSONObject(text)
-        } finally {
-            connection.disconnect()
+        } catch (error: Exception) {
+            runCatching { connection.disconnect() }
+            throw error
         }
     }
 
@@ -804,14 +840,14 @@ internal fun JSONObject.toLoginResult() = LoginResult(
     user = getJSONObject("user").toUserSummary(),
 )
 
-private fun JSONObject.toBootstrapResult() = BootstrapResult(
+internal fun JSONObject.toBootstrapResult() = BootstrapResult(
     business = getJSONObject("business").toBusinessSummary(),
     auth = getJSONObject("auth").toAuthSummary(),
     staff = optJSONArray("staff").toList { it.toStaffSummary() },
     serverTime = optString("serverTime"),
 )
 
-private fun JSONObject.toBookingsResult() = BookingsResult(
+internal fun JSONObject.toBookingsResult() = BookingsResult(
     tab = optString("tab", "today"),
     rows = optJSONArray("rows").toList { it.toBookingSummary() },
     serverTime = optString("serverTime"),
@@ -1234,6 +1270,7 @@ private fun labelsFor(module: String) = desktopModuleLabels[module]
 
 internal fun JSONObject.toDesktopModulePayload(moduleKey: String): DesktopModulePayload {
     val labels = labelsFor(moduleKey)
+    val business = optJSONObject("business")
     val genericMetrics = optJSONArray("metrics")
     val genericItems = optJSONArray("items")
     if (genericMetrics != null || genericItems != null || optString("title").isNotBlank()) {
@@ -1246,6 +1283,10 @@ internal fun JSONObject.toDesktopModulePayload(moduleKey: String): DesktopModule
             summary = optString("summary", labels.summary),
             title = optString("title", labels.title),
             webPath = optString("webPath").ifBlank { labels.webPath },
+            businessPhone = business.profileText("phone"),
+            businessAddress = business.profileText("address"),
+            cancellationPolicy = business.profileText("cancellationPolicy"),
+            depositPolicy = business.profileText("depositPolicy"),
         )
     }
 
@@ -1258,6 +1299,10 @@ internal fun JSONObject.toDesktopModulePayload(moduleKey: String): DesktopModule
         summary = labels.summary,
         title = labels.title,
         webPath = optString("webUrl").ifBlank { labels.webPath },
+        businessPhone = business.profileText("phone"),
+        businessAddress = business.profileText("address"),
+        cancellationPolicy = business.profileText("cancellationPolicy"),
+        depositPolicy = business.profileText("depositPolicy"),
     )
 }
 
@@ -1274,7 +1319,35 @@ private fun JSONObject.toModuleItem() = ModuleItem(
     subtitle = nullableString("subtitle"),
     meta = nullableString("meta"),
     status = nullableString("status"),
+    published = publishedFlag(),
+    rating = ratingValue(),
 )
+
+private fun JSONObject?.profileText(key: String): String =
+    this?.optString(key).orEmpty()
+
+private fun JSONObject.publishedFlag(): Boolean? {
+    if (has("published") && !isNull("published")) {
+        return when (val value = opt("published")) {
+            is Boolean -> value
+            else -> null
+        }
+    }
+    if (has("isPublished") && !isNull("isPublished")) return optBoolean("isPublished")
+    return when (optString("status").lowercase()) {
+        "published" -> true
+        "hidden" -> false
+        else -> null
+    }
+}
+
+private fun JSONObject.ratingValue(): Int? {
+    if (has("rating") && !isNull("rating")) {
+        val parsed = optInt("rating", Int.MIN_VALUE)
+        if (parsed in 1..5) return parsed
+    }
+    return Regex("""^(\d)/5""").find(optString("status"))?.groupValues?.get(1)?.toIntOrNull()
+}
 
 private fun JSONObject.toTypedModuleMetrics(moduleKey: String): List<ModuleMetric> {
     optJSONObject("summary")?.toMetricList()?.takeIf { it.isNotEmpty() }?.let { return it }
@@ -1338,6 +1411,8 @@ private fun JSONObject.toAvailabilityMemberItem(): ModuleItem {
         subtitle = subtitle,
         meta = if (overrideCount > 0) "$overrideCount upcoming overrides" else null,
         status = status,
+        published = null,
+        rating = null,
     )
 }
 
@@ -1381,6 +1456,8 @@ private fun JSONObject.toGenericModuleItem(moduleKey: String): ModuleItem {
         subtitle = subtitle,
         meta = firstText("startsAt", "createdAt", "updatedAt", "lastBookingAt", "currentPeriodEnd").takeIf { it.isNotBlank() },
         status = statusText(moduleKey),
+        published = publishedFlag(),
+        rating = ratingValue(),
     )
 }
 

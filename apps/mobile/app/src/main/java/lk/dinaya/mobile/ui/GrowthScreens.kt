@@ -34,6 +34,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -133,7 +134,7 @@ internal fun GrowthFilterChips(
             val active = selected == key
             Box(
                 modifier = Modifier
-                    .heightIn(min = 40.dp)
+                    .heightIn(min = 44.dp)
                     .clip(DinayaRadiusPill)
                     .background(
                         if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -200,8 +201,8 @@ internal fun ReviewsScreen(
         )
 
         val items = payload?.items.orEmpty().filter { item ->
-            val rating = parseReviewRating(item.status)
-            val matchesRating = ratingFilter == "all" || rating.toString() == ratingFilter
+            val rating = item.rating ?: parseReviewRating(item.status)
+            val matchesRating = ratingFilter == "all" || rating?.toString() == ratingFilter
             val matchesQuery = searchQuery.isBlank() ||
                 item.title.contains(searchQuery, ignoreCase = true) ||
                 (item.subtitle?.contains(searchQuery, ignoreCase = true) == true)
@@ -209,7 +210,7 @@ internal fun ReviewsScreen(
         }
 
         if (moduleState?.isLoading == true && payload == null) {
-            LoadingPanel()
+            BookingListSkeleton()
         } else if (items.isEmpty()) {
             SiteEmptyState(
                 title = payload?.emptyState?.ifBlank { null } ?: "No reviews yet",
@@ -227,6 +228,10 @@ internal fun ReviewsScreen(
                     ReviewRowCard(
                         item = item,
                         dark = dark,
+                        onTogglePublished = { published ->
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            viewModel.setReviewPublished(item.id, published)
+                        },
                         onReply = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             replyTarget = item
@@ -240,6 +245,11 @@ internal fun ReviewsScreen(
     replyTarget?.let { target ->
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         var replyText by remember(target.id) { mutableStateOf("") }
+        LaunchedEffect(state.generatedReviewReply, target.id) {
+            val generated = state.generatedReviewReply ?: return@LaunchedEffect
+            replyText = generated
+            viewModel.consumeGeneratedReviewReply()
+        }
         ModalBottomSheet(
             onDismissRequest = { replyTarget = null },
             sheetState = sheetState,
@@ -294,6 +304,32 @@ internal fun ReviewsScreen(
                         .fillMaxWidth()
                         .semantics { contentDescription = "Review reply input" },
                 )
+                OutlinedButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        viewModel.generateReviewReply(target.id)
+                    },
+                    enabled = !state.generatingReviewReply,
+                    shape = DinayaRadiusButton,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .semantics { contentDescription = "Generate review reply with AI" },
+                ) {
+                    if (state.generatingReviewReply) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Generating…", fontWeight = FontWeight.SemiBold)
+                    } else {
+                        Text("Generate with AI", fontWeight = FontWeight.SemiBold)
+                    }
+                }
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -329,8 +365,14 @@ private fun parseReviewRating(status: String?): Int? {
 }
 
 @Composable
-private fun ReviewRowCard(item: ModuleItem, dark: Boolean, onReply: () -> Unit) {
+private fun ReviewRowCard(
+    item: ModuleItem,
+    dark: Boolean,
+    onTogglePublished: (Boolean) -> Unit,
+    onReply: () -> Unit,
+) {
     val haptic = LocalHapticFeedback.current
+    val published = item.published ?: !item.status.equals("hidden", ignoreCase = true)
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = DinayaRadiusCard,
@@ -379,6 +421,30 @@ private fun ReviewRowCard(item: ModuleItem, dark: Boolean, onReply: () -> Unit) 
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 44.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = if (published) "Published on booking page" else "Hidden from booking page",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = published,
+                    onCheckedChange = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onTogglePublished(it)
+                    },
+                    modifier = Modifier.semantics {
+                        contentDescription = if (published) "Hide review by ${item.title}" else "Publish review by ${item.title}"
+                    },
                 )
             }
             OutlinedButton(

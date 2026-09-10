@@ -59,6 +59,8 @@ export type DesktopModuleMetric = {
 export type DesktopModuleItem = {
   id: string;
   meta?: string;
+  published?: boolean;
+  rating?: number;
   status?: string;
   subtitle?: string;
   title: string;
@@ -487,6 +489,7 @@ export async function getDesktopModuleData(
         comment: reviews.comment,
         createdAt: reviews.createdAt,
         id: reviews.id,
+        isPublished: reviews.isPublished,
         ownerReply: reviews.ownerReply,
         rating: reviews.rating,
       })
@@ -506,6 +509,8 @@ export async function getDesktopModuleData(
       rows.map((row) => item({
         id: row.id,
         meta: dateText(row.createdAt),
+        published: row.isPublished,
+        rating: row.rating,
         status: `${row.rating}/5`,
         subtitle: row.comment ?? "No comment",
         title: row.clientName,

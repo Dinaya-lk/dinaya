@@ -1099,7 +1099,7 @@ private fun CatalogServiceRow(item: ModuleItem, busy: Boolean, onEdit: () -> Uni
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Switch(checked = active, enabled = !busy, onCheckedChange = { onToggle() })
-                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
                     Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                 }
             }
@@ -1325,7 +1325,7 @@ private fun CatalogStaffRow(item: ModuleItem, busy: Boolean, onEdit: () -> Unit,
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Switch(checked = active, enabled = !busy, onCheckedChange = { onToggle() })
-                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
                     Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                 }
             }
@@ -1381,6 +1381,11 @@ private fun CatalogStaffSheet(
                 Text("Active", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                 Switch(checked = form.isActive, onCheckedChange = { onForm(form.copy(isActive = it)) })
             }
+            Text(
+                "Assign this person to services from Staff on the web.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Button(
                 onClick = onSave,
                 enabled = !busy,

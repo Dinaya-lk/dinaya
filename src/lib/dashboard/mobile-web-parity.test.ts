@@ -222,4 +222,31 @@ describe("Android merchant shell vs web dashboard", () => {
     expect(viewModelKt).toContain("defaultApiBaseUrl()");
     expect(viewModelKt.includes("if (BuildConfig.DEBUG) \"http://127.0.0.1:3002\"")).toBe(false);
   });
+
+  it("keeps native review publish, AI reply, and settings policy writes", () => {
+    expect(existsSync(resolve(process.cwd(), "src/app/api/v1/desktop/reviews/[id]/generate-reply/route.ts"))).toBe(true);
+    expect(existsSync(resolve(process.cwd(), "src/app/api/v1/mobile/reviews/[id]/generate-reply/route.ts"))).toBe(true);
+    expect(viewModelKt).toContain("fun setReviewPublished");
+    expect(viewModelKt).toContain("fun generateReviewReply");
+    expect(clientKt).toContain("fun patchReviewPublished");
+    expect(clientKt).toContain("fun generateReviewReply");
+    expect(clientKt).toContain("cancellationPolicy");
+    expect(clientKt).toContain("depositPolicy");
+    expect(appKt).toContain("/dashboard/booking-page");
+    expect(appKt).toContain("/dashboard/settings/api-keys");
+    expect(appKt).toContain("/dashboard/settings/webhooks");
+    expect(appKt).toContain("/dashboard/settings/voice-receptionist");
+    expect(appKt).toContain("Export CSV");
+  });
+
+  it("uses keep-alive, no-bounce springs, press scale, and reduced motion", () => {
+    const motionKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/ui/DinayaMotion.kt");
+    expect(clientKt).toContain("keep-alive");
+    expect(clientKt).toContain("useCaches = true");
+    expect(themeKt).toContain("LocalReduceMotion");
+    expect(motionKt).toContain("0.96f");
+    expect(motionKt).toContain("DampingRatioNoBouncy");
+    expect(appKt).toContain("dinayaSectionEnter");
+    expect(appKt).toContain("BookingListSkeleton");
+  });
 });

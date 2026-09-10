@@ -7,6 +7,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -180,7 +181,7 @@ val DinayaTypography = Typography(
     displaySmall = calStyle(36.sp, 44.sp, (-0.5).sp),
     headlineLarge = calStyle(32.sp, 40.sp, (-0.5).sp),
     headlineMedium = calStyle(30.sp, 36.sp, (-0.5).sp, FontWeight.Bold),
-    headlineSmall = calStyle(24.sp, 32.sp, (-0.4).sp),
+    headlineSmall = calStyle(24.sp, 32.sp, (-0.4).sp).copy(fontFeatureSettings = "tnum"),
     titleLarge = calStyle(20.sp, 28.sp, (-0.3).sp),
     titleMedium = calStyle(16.sp, 24.sp, (-0.1).sp),
     titleSmall = calStyle(14.sp, 20.sp, (-0.1).sp),
@@ -217,7 +218,7 @@ fun statusStyle(status: String, dark: Boolean): StatusStyle = when (status.lower
     } else {
         StatusStyle(Color(0xFF2E1065), Color(0xFF6D28D9), Color(0xFFDDD6FE))
     }
-    "cancelled" -> if (!dark) {
+    "cancelled", "hidden" -> if (!dark) {
         // Site: slate — NOT red (previous mobile build used red here).
         StatusStyle(Color(0xFFF1F5F9), Color(0xFFCBD5E1), Color(0xFF334155))
     } else {
@@ -239,7 +240,7 @@ fun statusLeftBorderColor(status: String): Color = when (status.lowercase()) {
     "pending", "no_show", "lead", "unpaid" -> Color(0xFFF59E0B) // amber-500
     "failed", "churned", "inactive" -> Color(0xFFEF4444) // red-500
     "refunded", "prospect" -> Color(0xFF8B5CF6) // violet-500
-    "cancelled" -> Color(0xFF94A3B8) // slate-400
+    "cancelled", "hidden" -> Color(0xFF94A3B8) // slate-400
     else -> Color(0xFFCBD5E1) // slate-300
 }
 
@@ -254,9 +255,12 @@ fun DinayaTheme(
         ThemePreference.LIGHT -> false
         ThemePreference.DARK -> true
     }
-    MaterialTheme(
-        colorScheme = if (isDark) DinayaDarkColors else DinayaLightColors,
-        typography = DinayaTypography,
-        content = content,
-    )
+    val reduceMotion = rememberReduceMotion()
+    CompositionLocalProvider(LocalReduceMotion provides reduceMotion) {
+        MaterialTheme(
+            colorScheme = if (isDark) DinayaDarkColors else DinayaLightColors,
+            typography = DinayaTypography,
+            content = content,
+        )
+    }
 }

@@ -138,6 +138,8 @@ data class ModuleItem(
     val subtitle: String?,
     val meta: String?,
     val status: String?,
+    val published: Boolean? = null,
+    val rating: Int? = null,
 )
 
 data class DesktopModulePayload(
@@ -149,6 +151,10 @@ data class DesktopModulePayload(
     val summary: String,
     val title: String,
     val webPath: String,
+    val businessPhone: String = "",
+    val businessAddress: String = "",
+    val cancellationPolicy: String = "",
+    val depositPolicy: String = "",
 )
 
 data class StoredSession(

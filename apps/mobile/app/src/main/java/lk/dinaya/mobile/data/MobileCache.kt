@@ -31,6 +31,29 @@ class SharedPrefsCacheStore(prefs: SharedPreferences) : CacheStore {
     }
 }
 
+class LayeredCacheStore(
+    private val memory: CacheStore,
+    private val disk: CacheStore,
+) : CacheStore {
+    override fun get(key: String): String? {
+        val cached = memory.get(key)
+        if (cached != null) return cached
+        val diskValue = disk.get(key) ?: return null
+        memory.put(key, diskValue)
+        return diskValue
+    }
+
+    override fun put(key: String, rawJson: String) {
+        memory.put(key, rawJson)
+        disk.put(key, rawJson)
+    }
+
+    override fun clear() {
+        memory.clear()
+        disk.clear()
+    }
+}
+
 class InMemoryCacheStore : CacheStore {
     private val entries = mutableMapOf<String, String>()
 
@@ -65,6 +88,10 @@ class MobileCache(private val store: CacheStore) {
     fun loadCalendar(view: String, date: String?, staffId: String?): JSONObject? =
         store.get(calendarKey(view, date, staffId))?.toJsonOrNull()
 
+    fun saveModule(module: String, raw: JSONObject) = store.put(moduleKey(module), raw.toString())
+
+    fun loadModule(module: String): JSONObject? = store.get(moduleKey(module))?.toJsonOrNull()
+
     fun clear() = store.clear()
 
     companion object {
@@ -76,10 +103,12 @@ class MobileCache(private val store: CacheStore) {
         fun calendarKey(view: String, date: String?, staffId: String?): String =
             "cache_calendar_${view}_${date.orEmpty()}_${staffId.orEmpty()}"
 
+        fun moduleKey(module: String): String = "cache_module_$module"
+
         fun fromContext(context: Context): MobileCache {
             val prefs = context.applicationContext
                 .getSharedPreferences("dinaya_mobile_cache", Context.MODE_PRIVATE)
-            return MobileCache(SharedPrefsCacheStore(prefs))
+            return MobileCache(LayeredCacheStore(InMemoryCacheStore(), SharedPrefsCacheStore(prefs)))
         }
     }
 }

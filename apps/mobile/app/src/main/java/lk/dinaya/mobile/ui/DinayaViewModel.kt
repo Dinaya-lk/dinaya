@@ -6,11 +6,15 @@ import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import java.time.LocalDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import lk.dinaya.mobile.data.AndroidKeystoreTokenStore
 import lk.dinaya.mobile.data.AvailabilityMember
 import lk.dinaya.mobile.data.AvailabilityWindow
@@ -38,8 +42,14 @@ import lk.dinaya.mobile.data.isEmulatorDevice
 import lk.dinaya.mobile.data.isLoopbackBaseUrl
 import lk.dinaya.mobile.data.CalendarPayload
 import lk.dinaya.mobile.data.OverviewPayload
+import lk.dinaya.mobile.data.bookingsResultFromOverview
+import lk.dinaya.mobile.data.shouldUseOverviewTodayRows
+import lk.dinaya.mobile.data.toBookingsResult
+import lk.dinaya.mobile.data.toBootstrapResult
+import lk.dinaya.mobile.data.toCalendarPayload
+import lk.dinaya.mobile.data.toDesktopModulePayload
+import lk.dinaya.mobile.data.toOverviewPayload
 import lk.dinaya.mobile.data.ThemePreference
-import org.json.JSONObject
 
 data class ModuleContentState(
     val isLoading: Boolean = false,
@@ -187,6 +197,7 @@ data class DinayaUiState(
     val password: String = "",
     val deviceName: String = defaultDeviceName(),
     val isLoading: Boolean = false,
+    val isRestoringSession: Boolean = true,
     val errorMessage: String? = null,
     val actionMessage: String? = null,
     val session: StoredSession? = null,
@@ -240,6 +251,8 @@ data class DinayaUiState(
     val catalogError: String? = null,
     val catalogNotice: String? = null,
     val broadcastTestSent: Map<String, String> = emptyMap(),
+    val generatedReviewReply: String? = null,
+    val generatingReviewReply: Boolean = false,
 )
 
 class DinayaViewModel(application: Application) : AndroidViewModel(application) {
@@ -249,25 +262,43 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
     private val _uiState = MutableStateFlow(DinayaUiState())
     val uiState: StateFlow<DinayaUiState> = _uiState.asStateFlow()
 
-    private fun newClient(baseUrl: String, cache: MobileCache = mobileCache): DinayaApiClient =
-        DinayaApiClient(baseUrl, cache)
+    private var cachedClient: DinayaApiClient? = null
+    private var cachedClientBase: String? = null
+
+    private fun newClient(baseUrl: String, cache: MobileCache = mobileCache): DinayaApiClient {
+        val existing = cachedClient
+        if (existing != null && cachedClientBase == baseUrl) return existing
+        return DinayaApiClient(baseUrl, cache).also {
+            cachedClient = it
+            cachedClientBase = baseUrl
+        }
+    }
 
     init {
         val savedTheme = prefs.getString("theme_preference", ThemePreference.SYSTEM.name) ?: ThemePreference.SYSTEM.name
         val initialTheme = runCatching { ThemePreference.valueOf(savedTheme) }.getOrDefault(ThemePreference.SYSTEM)
         _uiState.update { it.copy(themePreference = initialTheme) }
 
-        val savedSession = tokenStore.load()
-        if (savedSession != null && isLoopbackBaseUrl(savedSession.baseUrl) && !isEmulatorDevice()) {
-            tokenStore.clear()
-        } else if (savedSession != null) {
-            _uiState.update {
-                it.copy(
-                    baseUrl = savedSession.baseUrl,
-                    session = savedSession,
-                )
+        viewModelScope.launch(Dispatchers.IO) {
+            val savedSession = tokenStore.load()
+            withContext(Dispatchers.Main.immediate) {
+                if (savedSession != null && isLoopbackBaseUrl(savedSession.baseUrl) && !isEmulatorDevice()) {
+                    tokenStore.clear()
+                    _uiState.update { it.copy(isRestoringSession = false) }
+                } else if (savedSession != null) {
+                    paintCachedDashboard(savedSession)
+                    _uiState.update {
+                        it.copy(
+                            baseUrl = savedSession.baseUrl,
+                            session = savedSession,
+                            isRestoringSession = false,
+                        )
+                    }
+                    refresh()
+                } else {
+                    _uiState.update { it.copy(isRestoringSession = false) }
+                }
             }
-            refresh()
         }
     }
 
@@ -474,11 +505,10 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
                 tokenStore.save(session)
                 _uiState.update {
                     it.copy(
-                        isLoading = false,
+                        isLoading = true,
+                        isRestoringSession = false,
                         password = "",
                         session = session,
-                        bootstrap = null,
-                        bookings = emptyList(),
                         bookingsQuery = "",
                         bookingsStatus = "all",
                         showNewBookingSheet = false,
@@ -501,7 +531,6 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
                         rescheduleError = null,
                         isRescheduling = false,
                         selectedSectionKey = "overview",
-                        moduleContent = emptyMap(),
                         selectedClient = null,
                         clientDetail = null,
                         clientNoteDraft = "",
@@ -528,66 +557,109 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun paintCachedDashboard(session: StoredSession) {
+        val bootstrap = runCatching { mobileCache.loadBootstrap()?.toBootstrapResult() }.getOrNull()
+        val overview = runCatching { mobileCache.loadOverview()?.toOverviewPayload() }.getOrNull()
+        val bookings = runCatching { mobileCache.loadBookings("today||")?.toBookingsResult() }.getOrNull()
+        val calendar = runCatching { mobileCache.loadCalendar("day", null, null)?.toCalendarPayload() }.getOrNull()
+        if (bootstrap == null && overview == null && bookings == null) return
+        _uiState.update {
+            it.copy(
+                baseUrl = session.baseUrl,
+                session = session,
+                bootstrap = bootstrap ?: it.bootstrap,
+                overviewData = overview ?: it.overviewData,
+                bookings = bookings?.rows ?: it.bookings,
+                calendarData = calendar ?: it.calendarData,
+                lastSyncedAt = bookings?.serverTime ?: bootstrap?.serverTime ?: it.lastSyncedAt,
+                isLoading = false,
+            )
+        }
+    }
+
     fun refresh() {
         val session = uiState.value.session ?: return
         viewModelScope.launch {
+            val hasCached = uiState.value.bootstrap != null || uiState.value.bookings.isNotEmpty()
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val selectedKey = uiState.value.selectedSectionKey
             runCatching {
                 val client = newClient(session.baseUrl)
-                val bootstrap = client.fetchBootstrap(session.deviceKey)
-                when (selectedKey) {
-                    "overview" -> {
-                        val overview = runCatching { client.fetchOverview(session.deviceKey) }.getOrNull()
-                        val bookings = client.fetchTodayBookings(session.deviceKey)
-                        Triple(bootstrap, bookings, overview)
-                    }
-                    "bookings" -> {
-                        val bookings = client.fetchBookings(
-                            session.deviceKey,
-                            tab = uiState.value.bookingsTab,
-                            query = uiState.value.bookingsQuery.ifBlank { null },
-                            status = uiState.value.bookingsStatus.takeIf { it.isNotBlank() && it.lowercase() != "all" },
-                        )
-                        Triple(bootstrap, bookings, null)
-                    }
-                    "calendar" -> {
-                        val cal = client.fetchCalendar(
-                            deviceKey = session.deviceKey,
-                            view = uiState.value.calendarView,
-                            date = uiState.value.calendarDate,
-                            staffId = uiState.value.calendarStaffId,
-                        )
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                bootstrap = bootstrap,
-                                calendarData = cal,
-                                calendarDate = cal.date,
-                                lastSyncedAt = cal.date,
-                            )
+                coroutineScope {
+                    val bootstrapDeferred = async { client.fetchBootstrap(session.deviceKey) }
+                    when (selectedKey) {
+                        "overview" -> {
+                            val overviewDeferred = async {
+                                runCatching { client.fetchOverview(session.deviceKey) }.getOrNull()
+                            }
+                            val bootstrap = bootstrapDeferred.await()
+                            val overview = overviewDeferred.await()
+                            val bookings = if (shouldUseOverviewTodayRows(overview) && overview != null) {
+                                bookingsResultFromOverview(overview, bootstrap.serverTime)
+                            } else {
+                                client.fetchTodayBookings(session.deviceKey)
+                            }
+                            Triple(bootstrap, bookings, overview)
                         }
-                        return@launch
-                    }
-                    else -> {
-                        val section = dashboardSectionByKey(selectedKey)
-                        val module = section.desktopModule?.let { client.fetchDesktopModule(session.deviceKey, it) }
-                        _uiState.update {
-                            val nextModuleContent = if (module != null) {
-                                it.moduleContent + (selectedKey to ModuleContentState(payload = module))
-                            } else it.moduleContent
-                            it.copy(
-                                isLoading = false,
-                                errorMessage = null,
-                                bootstrap = bootstrap,
-                                moduleContent = nextModuleContent,
-                                lastSyncedAt = module?.refreshedAt ?: bootstrap.serverTime,
-                            )
+                        "bookings" -> {
+                            val bookingsDeferred = async {
+                                client.fetchBookings(
+                                    session.deviceKey,
+                                    tab = uiState.value.bookingsTab,
+                                    query = uiState.value.bookingsQuery.ifBlank { null },
+                                    status = uiState.value.bookingsStatus.takeIf { it.isNotBlank() && it.lowercase() != "all" },
+                                )
+                            }
+                            Triple(bootstrapDeferred.await(), bookingsDeferred.await(), null)
                         }
-                        return@launch
+                        "calendar" -> {
+                            val calendarDeferred = async {
+                                client.fetchCalendar(
+                                    deviceKey = session.deviceKey,
+                                    view = uiState.value.calendarView,
+                                    date = uiState.value.calendarDate,
+                                    staffId = uiState.value.calendarStaffId,
+                                )
+                            }
+                            val bootstrap = bootstrapDeferred.await()
+                            val cal = calendarDeferred.await()
+                            _uiState.update {
+                                it.copy(
+                                    isLoading = false,
+                                    bootstrap = bootstrap,
+                                    calendarData = cal,
+                                    calendarDate = cal.date,
+                                    lastSyncedAt = cal.date,
+                                )
+                            }
+                            return@coroutineScope null
+                        }
+                        else -> {
+                            val section = dashboardSectionByKey(selectedKey)
+                            val moduleDeferred = async {
+                                section.desktopModule?.let { client.fetchDesktopModule(session.deviceKey, it) }
+                            }
+                            val bootstrap = bootstrapDeferred.await()
+                            val module = moduleDeferred.await()
+                            _uiState.update {
+                                val nextModuleContent = if (module != null) {
+                                    it.moduleContent + (selectedKey to ModuleContentState(payload = module))
+                                } else it.moduleContent
+                                it.copy(
+                                    isLoading = false,
+                                    errorMessage = null,
+                                    bootstrap = bootstrap,
+                                    moduleContent = nextModuleContent,
+                                    lastSyncedAt = module?.refreshedAt ?: bootstrap.serverTime,
+                                )
+                            }
+                            return@coroutineScope null
+                        }
                     }
                 }
-            }.onSuccess { (bootstrap, bookings, overview) ->
+            }.onSuccess { result ->
+                if (result == null) return@launch
+                val (bootstrap, bookings, overview) = result
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -600,7 +672,10 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }.onFailure { error ->
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = error.message ?: "Refresh failed.")
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = if (hasCached) it.errorMessage else (error.message ?: "Refresh failed."),
+                    )
                 }
             }
         }
@@ -638,6 +713,20 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         val module = section.desktopModule ?: return
         val existing = uiState.value.moduleContent[section.key]
         if (!force && existing?.payload != null) return
+        if (!force && existing?.payload == null) {
+            val cached = runCatching {
+                section.desktopModule?.let { mobileCache.loadModule(it)?.toDesktopModulePayload(it) }
+            }.getOrNull()
+            if (cached != null) {
+                _uiState.update {
+                    it.copy(
+                        moduleContent = it.moduleContent + (
+                            section.key to ModuleContentState(payload = cached)
+                        ),
+                    )
+                }
+            }
+        }
 
         viewModelScope.launch {
             _uiState.update {
@@ -1467,6 +1556,50 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun setReviewPublished(reviewId: String, published: Boolean) {
+        val session = uiState.value.session ?: return
+        updateLocalModuleItemPublished(reviewId, published)
+        viewModelScope.launch {
+            runCatching {
+                newClient(session.baseUrl).patchReviewPublished(session.deviceKey, reviewId, published)
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(actionMessage = if (published) "Review published." else "Review hidden.")
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(errorMessage = error.message ?: "Could not update review visibility.")
+                }
+                loadSectionModule("reviews", force = true)
+            }
+        }
+    }
+
+    fun generateReviewReply(reviewId: String) {
+        val session = uiState.value.session ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(generatingReviewReply = true, generatedReviewReply = null) }
+            runCatching {
+                newClient(session.baseUrl).generateReviewReply(session.deviceKey, reviewId)
+            }.onSuccess { reply ->
+                _uiState.update {
+                    it.copy(generatingReviewReply = false, generatedReviewReply = reply)
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        generatingReviewReply = false,
+                        errorMessage = error.message ?: "Could not generate a reply.",
+                    )
+                }
+            }
+        }
+    }
+
+    fun consumeGeneratedReviewReply() {
+        _uiState.update { it.copy(generatedReviewReply = null) }
+    }
+
     fun toggleAutomation(ruleId: String, isActive: Boolean) {
         val session = uiState.value.session ?: return
         // Optimistic update first for instant toggle feedback.
@@ -1759,7 +1892,13 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun updateBusinessProfile(name: String, phone: String, address: String) {
+    fun updateBusinessProfile(
+        name: String,
+        phone: String,
+        address: String,
+        cancellationPolicy: String? = null,
+        depositPolicy: String? = null,
+    ) {
         val session = uiState.value.session ?: return
         val trimmedName = name.trim()
         if (trimmedName.isBlank()) {
@@ -1773,6 +1912,8 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
                     name = trimmedName,
                     phone = phone.trim().ifBlank { null },
                     address = address.trim().ifBlank { null },
+                    cancellationPolicy = cancellationPolicy?.trim()?.ifBlank { null },
+                    depositPolicy = depositPolicy?.trim()?.ifBlank { null },
                 )
             }.onSuccess {
                 _uiState.update { it.copy(actionMessage = "Business profile saved.") }
@@ -1816,6 +1957,18 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun updateLocalModuleItemPublished(reviewId: String, published: Boolean) {
+        val existing = uiState.value.moduleContent["reviews"]?.payload ?: return
+        val next = existing.items.map { item ->
+            if (item.id == reviewId) item.copy(published = published) else item
+        }
+        _uiState.update {
+            it.copy(
+                moduleContent = it.moduleContent + ("reviews" to ModuleContentState(payload = existing.copy(items = next))),
+            )
+        }
+    }
+
     private fun updateLocalModuleItemStatus(sectionKey: String, itemId: String, status: String) {
         val existing = uiState.value.moduleContent[sectionKey]?.payload ?: return
         val next = existing.items.map { item ->
@@ -1830,9 +1983,18 @@ class DinayaViewModel(application: Application) : AndroidViewModel(application) 
 
     fun signOut() {
         val session = uiState.value.session
+        val theme = uiState.value.themePreference
         tokenStore.clear()
+        mobileCache.clear()
+        cachedClient = null
+        cachedClientBase = null
         _uiState.update {
-            DinayaUiState(baseUrl = it.baseUrl, deviceName = it.deviceName)
+            DinayaUiState(
+                baseUrl = it.baseUrl,
+                deviceName = it.deviceName,
+                themePreference = theme,
+                isRestoringSession = false,
+            )
         }
 
         if (session != null) {

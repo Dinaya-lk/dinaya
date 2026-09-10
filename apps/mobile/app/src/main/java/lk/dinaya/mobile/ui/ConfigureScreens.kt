@@ -431,6 +431,7 @@ internal fun SettingsScreen(
     viewModel: DinayaViewModel,
     dark: Boolean,
     onSignOutRequest: () -> Unit,
+    onOpenWeb: (String) -> Unit,
 ) {
     val moduleState = state.moduleContent["settings"]
     val payload = moduleState?.payload
@@ -439,8 +440,10 @@ internal fun SettingsScreen(
     val unusedDark = dark
 
     var name by remember(state.bootstrap?.business?.name) { mutableStateOf(state.bootstrap?.business?.name.orEmpty()) }
-    var phone by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
+    var phone by remember(payload?.businessPhone) { mutableStateOf(payload?.businessPhone.orEmpty()) }
+    var address by remember(payload?.businessAddress) { mutableStateOf(payload?.businessAddress.orEmpty()) }
+    var cancellationPolicy by remember(payload?.cancellationPolicy) { mutableStateOf(payload?.cancellationPolicy.orEmpty()) }
+    var depositPolicy by remember(payload?.depositPolicy) { mutableStateOf(payload?.depositPolicy.orEmpty()) }
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         GrowthHeader(
@@ -490,10 +493,50 @@ internal fun SettingsScreen(
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Business address input" },
                 )
+                OutlinedTextField(
+                    value = cancellationPolicy,
+                    onValueChange = { cancellationPolicy = it },
+                    label = { Text("Cancellation policy") },
+                    placeholder = {
+                        Text(
+                            "Please reschedule at least 12 hours before the appointment.",
+                            style = DinayaFieldTextStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    },
+                    minLines = 3,
+                    maxLines = 6,
+                    shape = DinayaRadiusButton,
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Cancellation policy input" },
+                )
+                OutlinedTextField(
+                    value = depositPolicy,
+                    onValueChange = { depositPolicy = it },
+                    label = { Text("Deposit policy") },
+                    placeholder = {
+                        Text(
+                            "Deposits are deducted from the final bill.",
+                            style = DinayaFieldTextStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    },
+                    minLines = 3,
+                    maxLines = 6,
+                    shape = DinayaRadiusButton,
+                    textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Deposit policy input" },
+                )
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.updateBusinessProfile(name, phone, address)
+                        viewModel.updateBusinessProfile(
+                            name = name,
+                            phone = phone,
+                            address = address,
+                            cancellationPolicy = cancellationPolicy,
+                            depositPolicy = depositPolicy,
+                        )
                     },
                     enabled = name.isNotBlank() && moduleState?.isLoading != true,
                     shape = DinayaRadiusButton,
@@ -507,6 +550,46 @@ internal fun SettingsScreen(
                         .semantics { contentDescription = "Save business profile" },
                 ) {
                     Text("Save profile", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            shape = DinayaRadiusCard,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("On the web", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Booking page editor, API keys, webhooks, and voice stay in the browser.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                listOf(
+                    "/dashboard/booking-page" to "Booking page editor",
+                    "/dashboard/settings/api-keys" to "API keys",
+                    "/dashboard/settings/webhooks" to "Webhooks",
+                    "/dashboard/settings/voice-receptionist" to "Voice receptionist",
+                ).forEach { (path, label) ->
+                    OutlinedButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onOpenWeb(path)
+                        },
+                        shape = DinayaRadiusButton,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .semantics { contentDescription = "Open $label on the web" },
+                    ) {
+                        Icon(imageVector = Icons.Filled.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(label, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

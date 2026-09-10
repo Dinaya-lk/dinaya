@@ -25,18 +25,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -102,6 +93,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -167,7 +159,17 @@ fun DinayaMobileApp(viewModel: DinayaViewModel = viewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     DinayaTheme(themePreference = state.themePreference) {
-        if (state.session == null) {
+        if (state.isRestoringSession) {
+            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 3.dp,
+                    )
+                }
+            }
+        } else if (state.session == null) {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 LoginScreen(state, viewModel)
             }
@@ -182,48 +184,13 @@ fun DinayaMobileApp(viewModel: DinayaViewModel = viewModel()) {
 fun Modifier.pressScale(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     scaleDown: Float = 0.96f,
-): Modifier {
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) scaleDown else 1f,
-        animationSpec = spring(
-            dampingRatio = 0.7f,
-            stiffness = Spring.StiffnessMediumLow,
-        ),
-        label = "pressScale",
-    )
-    return this.graphicsLayer {
-        scaleX = scale
-        scaleY = scale
-    }
-}
+): Modifier = dinayaPressScale(interactionSource, scaleDown)
 
 @Composable
 fun Modifier.bounceClick(
     scaleDown: Float = 0.96f,
     onClick: () -> Unit,
-): Modifier {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) scaleDown else 1f,
-        animationSpec = spring(
-            dampingRatio = 0.7f,
-            stiffness = Spring.StiffnessMediumLow,
-        ),
-        label = "bounceClick",
-    )
-    return this
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
-        .clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            onClick = onClick,
-        )
-}
+): Modifier = dinayaBounceClick(scaleDown = scaleDown, onClick = onClick)
 
 // ——— Auth Screen ——————————————————————————————————————————————————————————
 @Composable
@@ -578,13 +545,7 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             AnimatedContent(
                 targetState = selectedSection.key,
                 transitionSpec = {
-                    (fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
-                        slideInHorizontally(
-                            animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow),
-                            initialOffsetX = { fullWidth -> (fullWidth * 0.05f).toInt() }
-                        )).togetherWith(
-                        fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
-                    )
+                    dinayaSectionEnter().togetherWith(dinayaSectionExit())
                 },
                 label = "sectionTransition",
             ) { sectionKey ->
@@ -762,6 +723,7 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
                             viewModel = viewModel,
                             dark = dark,
                             onSignOutRequest = { signOutDialogOpen = true },
+                            onOpenWeb = { path -> openWebFallback(context, state.session, path) },
                         )
                     }
                     else -> {
@@ -824,6 +786,10 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
                 onHelp = {
                     moreOpen = false
                     openWebFallback(context, state.session, "/docs")
+                },
+                onOpenWeb = { path ->
+                    moreOpen = false
+                    openWebFallback(context, state.session, path)
                 },
                 onSignOutRequest = {
                     moreOpen = false
@@ -1084,8 +1050,11 @@ internal fun OverviewScreen(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val newBookingInteraction = remember { MutableInteractionSource() }
+            val refreshInteraction = remember { MutableInteractionSource() }
             Button(
                 onClick = viewModel::openNewBookingSheet,
+                interactionSource = newBookingInteraction,
                 shape = DinayaRadiusButton,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -1094,19 +1063,22 @@ internal fun OverviewScreen(
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .height(44.dp),
+                    .height(44.dp)
+                    .pressScale(newBookingInteraction),
             ) {
                 Text("New booking", fontWeight = FontWeight.Medium)
             }
             OutlinedButton(
                 onClick = viewModel::refreshSelectedSection,
                 enabled = !state.isLoading,
+                interactionSource = refreshInteraction,
                 shape = DinayaRadiusButton,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier
                     .weight(1f)
-                    .height(44.dp),
+                    .height(44.dp)
+                    .pressScale(refreshInteraction),
             ) {
                 Text("Refresh", fontWeight = FontWeight.SemiBold)
             }
@@ -1136,7 +1108,7 @@ internal fun OverviewScreen(
         }
 
         if (state.isLoading && todayBookings.isEmpty()) {
-            LoadingPanel()
+            BookingListSkeleton()
         } else if (todayBookings.isEmpty()) {
             SiteEmptyState(
                 title = "No bookings today",
@@ -1146,13 +1118,15 @@ internal fun OverviewScreen(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 todayBookings.forEach { booking ->
-                    BookingCard(
-                        booking = booking,
-                        businessName = businessName,
-                        dark = dark,
-                        onClick = { viewModel.selectBooking(booking) },
-                        onRequestStatus = onRequestStatus,
-                    )
+                    key(booking.id) {
+                        BookingCard(
+                            booking = booking,
+                            businessName = businessName,
+                            dark = dark,
+                            onClick = { viewModel.selectBooking(booking) },
+                            onRequestStatus = onRequestStatus,
+                        )
+                    }
                 }
             }
         }
@@ -1166,13 +1140,15 @@ internal fun OverviewScreen(
             )
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 overview.nextRows.forEach { booking ->
-                    BookingCard(
-                        booking = booking,
-                        businessName = businessName,
-                        dark = dark,
-                        onClick = { viewModel.selectBooking(booking) },
-                        onRequestStatus = onRequestStatus,
-                    )
+                    key(booking.id) {
+                        BookingCard(
+                            booking = booking,
+                            businessName = businessName,
+                            dark = dark,
+                            onClick = { viewModel.selectBooking(booking) },
+                            onRequestStatus = onRequestStatus,
+                        )
+                    }
                 }
             }
         }
@@ -1297,6 +1273,7 @@ internal fun BookingsScreen(
     )
     val statusFilters = listOf("all", "pending", "confirmed", "completed", "cancelled")
     val selectedStatus = state.bookingsStatus.ifBlank { "all" }
+    val context = LocalContext.current
 
     // Debounced server search: the top-chrome query hits ?q= without spamming.
     LaunchedEffect(searchQuery) {
@@ -1309,8 +1286,10 @@ internal fun BookingsScreen(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        val newBookingInteraction = remember { MutableInteractionSource() }
         Button(
             onClick = viewModel::openNewBookingSheet,
+            interactionSource = newBookingInteraction,
             shape = DinayaRadiusButton,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -1319,7 +1298,8 @@ internal fun BookingsScreen(
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp),
+                .height(44.dp)
+                .pressScale(newBookingInteraction),
         ) {
             Text("New booking", fontWeight = FontWeight.Medium)
         }
@@ -1341,12 +1321,14 @@ internal fun BookingsScreen(
                 )
             }
             OutlinedButton(
-                onClick = viewModel::refreshSelectedSection,
+                onClick = {
+                    openWebFallback(context, state.session, "/dashboard/bookings")
+                },
                 shape = DinayaRadiusButton,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 modifier = Modifier.height(48.dp),
             ) {
-                Text("Refresh", style = MaterialTheme.typography.labelMedium)
+                Text("Export CSV", style = MaterialTheme.typography.labelMedium)
             }
         }
 
@@ -1360,6 +1342,7 @@ internal fun BookingsScreen(
                 Box(
                     modifier = Modifier
                         .weight(1f)
+                        .heightIn(min = 44.dp)
                         .clip(DinayaRadiusPill)
                         .background(
                             if (active) MaterialTheme.colorScheme.primary
@@ -1397,6 +1380,7 @@ internal fun BookingsScreen(
                 val active = selectedStatus == statusKey
                 Box(
                     modifier = Modifier
+                        .heightIn(min = 44.dp)
                         .clip(DinayaRadiusPill)
                         .background(
                             if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -1441,7 +1425,7 @@ internal fun BookingsScreen(
         )
 
         if (state.isLoading && state.bookings.isEmpty()) {
-            LoadingPanel()
+            BookingListSkeleton()
         } else if (filtered.isEmpty()) {
             SiteEmptyState(
                 title = "No bookings found",
@@ -1451,13 +1435,15 @@ internal fun BookingsScreen(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 filtered.forEach { booking ->
-                    BookingCard(
-                        booking = booking,
-                        businessName = businessName,
-                        dark = dark,
-                        onClick = { viewModel.selectBooking(booking) },
-                        onRequestStatus = onRequestStatus,
-                    )
+                    key(booking.id) {
+                        BookingCard(
+                            booking = booking,
+                            businessName = businessName,
+                            dark = dark,
+                            onClick = { viewModel.selectBooking(booking) },
+                            onRequestStatus = onRequestStatus,
+                        )
+                    }
                 }
             }
         }
@@ -1524,7 +1510,7 @@ internal fun CalendarScreen(
         val rows = cal?.rows.orEmpty()
 
         if (state.isLoading && rows.isEmpty()) {
-            LoadingPanel()
+            BookingListSkeleton()
         } else if (rows.isEmpty()) {
             SiteEmptyState(
                 title = "No appointments for ${formatDateHeader(currentDate)}",
@@ -1533,13 +1519,15 @@ internal fun CalendarScreen(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 rows.forEach { booking ->
-                    BookingCard(
-                        booking = booking,
-                        businessName = businessName,
-                        dark = dark,
-                        onClick = { viewModel.selectBooking(booking) },
-                        onRequestStatus = onRequestStatus,
-                    )
+                    key(booking.id) {
+                        BookingCard(
+                            booking = booking,
+                            businessName = businessName,
+                            dark = dark,
+                            onClick = { viewModel.selectBooking(booking) },
+                            onRequestStatus = onRequestStatus,
+                        )
+                    }
                 }
             }
         }
@@ -1598,7 +1586,7 @@ internal fun ClientsScreen(
         }
 
         if (moduleState?.isLoading == true && items.isEmpty()) {
-            LoadingPanel()
+            BookingListSkeleton()
         } else if (items.isEmpty()) {
             SiteEmptyState(
                 title = "No clients found",
@@ -2104,7 +2092,7 @@ internal fun ClientRowCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .bounceClick(onClick = onClick),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -2149,7 +2137,7 @@ internal fun ClientRowCard(
             if (phoneCandidate.contains(Regex("[0-9]"))) {
                 IconButton(
                     onClick = { dialPhoneNumber(context, phoneCandidate) },
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(44.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Phone,
@@ -2300,6 +2288,7 @@ internal fun MoreSheetContent(
     onSelect: (String) -> Unit,
     onSetTheme: (ThemePreference) -> Unit,
     onHelp: () -> Unit,
+    onOpenWeb: (String) -> Unit,
     onSignOutRequest: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -2523,6 +2512,90 @@ internal fun MoreSheetContent(
                         .fillMaxWidth()
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onOpenWeb("/dashboard/booking-page")
+                        }
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .semantics { contentDescription = "Open booking page editor on the web" },
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(imageVector = Icons.Filled.OpenInBrowser, contentDescription = "Booking page editor icon", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Booking page editor", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = "Cover, hours, and public page — web", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onOpenWeb("/dashboard/settings/api-keys")
+                        }
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .semantics { contentDescription = "Open API keys on the web" },
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(imageVector = Icons.Filled.Extension, contentDescription = "API keys icon", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "API keys", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = "Voice and integrations — web", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onOpenWeb("/dashboard/settings/webhooks")
+                        }
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .semantics { contentDescription = "Open webhooks on the web" },
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(imageVector = Icons.Filled.Bolt, contentDescription = "Webhooks icon", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Webhooks", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = "Outbound events — web", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onOpenWeb("/dashboard/settings/voice-receptionist")
+                        }
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .semantics { contentDescription = "Open voice receptionist on the web" },
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(imageVector = Icons.Filled.AutoAwesome, contentDescription = "Voice receptionist icon", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Voice receptionist", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = "Growth voice setup — web", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onHelp()
                         }
                         .padding(horizontal = 14.dp, vertical = 12.dp)
@@ -2652,12 +2725,10 @@ internal fun BottomTabCell(
     val haptic = LocalHapticFeedback.current
     val content = if (active) MaterialTheme.colorScheme.primary
     else MaterialTheme.colorScheme.onSurfaceVariant
+    val reduceMotion = LocalReduceMotion.current
     val iconScale by animateFloatAsState(
-        targetValue = if (active) 1.15f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow,
-        ),
+        targetValue = if (active && !reduceMotion) 1.08f else 1.0f,
+        animationSpec = dinayaNoBounceSpring(),
         label = "tabIconScale",
     )
 
@@ -2721,7 +2792,7 @@ internal fun ModuleWorkspace(
     }
 
     if (moduleState?.isLoading == true && payload == null) {
-        LoadingPanel()
+        BookingListSkeleton()
         return
     }
 
