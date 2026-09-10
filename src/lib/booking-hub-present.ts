@@ -9,7 +9,20 @@ export function hubTagline(description: string | null | undefined, fallback: str
   return fallback;
 }
 
-export function serviceIconName(serviceName: string): string {
+const CATEGORY_ICON: Record<string, string> = {
+  colour: "droplet-half",
+  color: "droplet-half",
+  consultations: "chat-dots",
+  consultation: "chat-dots",
+  grooming: "person",
+  treatments: "gem",
+  treatment: "gem",
+};
+
+export function serviceIconName(serviceName: string, categoryName?: string | null): string {
+  const category = categoryName?.trim().toLowerCase();
+  if (category && CATEGORY_ICON[category]) return CATEGORY_ICON[category];
+
   const n = serviceName.toLowerCase();
   if (n.includes("beard") || n.includes("shave") || n.includes("trim")) return "person";
   if (n.includes("colour") || n.includes("color") || n.includes("dye") || n.includes("tint")) {

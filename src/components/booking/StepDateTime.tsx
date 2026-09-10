@@ -367,7 +367,7 @@ export default function StepDateTime({
               nextAvailableDate={showNextAvailable ? nextAvailable?.date : undefined}
               onMonthChange={handleMonthChange}
               onSelect={onDateChange}
-              size="comfortable"
+              size="dense"
             />
           </div>
         </section>
@@ -375,8 +375,8 @@ export default function StepDateTime({
         {!hideSlots ? (
           <section className="min-w-0 flex-1 border-t border-border/80 py-4 md:flex md:min-h-0 md:flex-col md:border-t-0 md:py-0 md:pl-6">
             {compactDateHeading ? (
-                <div className="mb-3 flex items-baseline justify-between gap-2 md:mb-4">
-                  <h3 className="text-sm font-semibold text-foreground md:text-base">{compactDateHeading}</h3>
+                <div className="mb-3 flex items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-foreground">{compactDateHeading}</h3>
                   <span className="text-xs font-medium text-muted-foreground">{copy.availableTimes}</span>
                 </div>
               ) : (

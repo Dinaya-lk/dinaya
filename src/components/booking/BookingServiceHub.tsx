@@ -152,7 +152,7 @@ export default function BookingServiceHub({
 
   function renderHubService(service: BookingService) {
     const href = buildServiceBookingPath(businessSlug, service.slug ?? service.id);
-    const iconName = serviceIconName(service.name);
+    const iconName = serviceIconName(service.name, service.categoryName);
     const minVariantPrice = minPriceVariantLkr(service.priceVariants);
     const displayPriceLkr = minVariantPrice ?? service.priceLkr;
     const rowClassName = cn(
@@ -294,9 +294,18 @@ export default function BookingServiceHub({
             />
           ) : null}
           {locationLine ? (
-            <p className="mt-2 flex items-start justify-center gap-1.5 text-sm text-foreground/75">
-              <Icon name="geo-alt" className="mt-0.5 shrink-0 text-muted-foreground" />
-              <span>{locationLine}</span>
+            <p
+              className="mt-2 flex flex-wrap items-start justify-center gap-x-1.5 gap-y-0.5 text-sm text-foreground/75"
+              aria-label={locationLine}
+            >
+              <Icon name="geo-alt" className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="inline-flex flex-wrap items-baseline justify-center gap-x-1.5" aria-hidden="true">
+                {businessAddress ? <span>{businessAddress}</span> : null}
+                {businessAddress && businessPhone ? (
+                  <span className="text-muted-foreground/50">·</span>
+                ) : null}
+                {businessPhone ? <span className="whitespace-nowrap">{businessPhone}</span> : null}
+              </span>
             </p>
           ) : null}
           <BookingSocialLinks

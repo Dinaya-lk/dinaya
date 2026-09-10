@@ -2,6 +2,7 @@
 
 import { parseISO } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { Icon } from "@/components/ui/Icon";
 import type { BookingCopy } from "@/lib/i18n";
 import { TimeSlotGridSkeleton } from "./SlotListPanelSkeleton";
 import { SlotsEmptyView, type NextAvailableSlot } from "./SlotsEmptyView";
@@ -94,7 +95,7 @@ export default function TimeSlotGrid({
     >
       {grouped.map(({ period, label, slots: periodSlots }) => (
         <div key={period}>
-          <p className="mb-2.5 text-xs font-semibold text-muted-foreground">{label}</p>
+          <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
           <div className="grid grid-cols-2 gap-2.5 min-[400px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-3">
             {periodSlots.map((slot) => {
               const isSelected = selectedStartUtc === slot.startUtc;
@@ -108,19 +109,26 @@ export default function TimeSlotGrid({
                   aria-label={`${slot.label}${isSelected ? ", selected" : ""}${
                     hasCalendarConflict ? `, ${copy.calendarConflict}` : ""
                   }`}
-                  className={`flex w-full min-h-11 items-center justify-center gap-1.5 rounded-lg px-2 py-2.5 text-base font-semibold tabular-nums transition-[transform,background-color,border-color,box-shadow] duration-150 ease-out active:scale-[0.96] motion-reduce:active:scale-100 md:text-sm ${
+                  className={`flex w-full min-h-11 items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 text-sm font-medium tabular-nums transition-[transform,background-color,border-color,box-shadow] duration-150 ease-out active:scale-[0.96] motion-reduce:active:scale-100 ${
                     isSelected
-                      ? "booking-bg-accent text-white shadow-xs ring-2 ring-(--booking-accent-soft)"
-                      : "border border-border bg-secondary/40 text-foreground ring-1 ring-white/5 hover:booking-border-accent hover:bg-(--booking-accent-muted)/40"
+                      ? "booking-bg-accent border-transparent text-white booking-shadow-accent"
+                      : "border-(--booking-accent-soft) booking-bg-accent-muted text-foreground hover:booking-border-accent hover:booking-bg-accent-soft"
                   }`}
                   title={hasCalendarConflict ? copy.calendarConflict : undefined}
                 >
-                  {/* Cal.com-style overlay indicator: warning dot on slots that
-                      overlap a personal calendar event; slot stays bookable. */}
-                  {hasCalendarConflict && !isSelected && (
-                    <span className="size-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                  {/* Cal.com-style overlay indicator: warning dot when the slot
+                      overlaps a personal calendar event, green when free — the
+                      slot stays bookable either way. */}
+                  {!isSelected && (
+                    <span
+                      className={`size-2 shrink-0 rounded-full ${
+                        hasCalendarConflict ? "bg-amber-500" : "bg-[#00D492]"
+                      }`}
+                      aria-hidden
+                    />
                   )}
-                  {slot.label}
+                  <span className="min-w-0 text-center">{slot.label}</span>
+                  {isSelected && <Icon name="check" className="shrink-0 text-xs opacity-90" />}
                 </button>
               );
             })}

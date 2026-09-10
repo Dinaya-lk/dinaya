@@ -48,14 +48,14 @@ export function buildBookingBreadcrumbItems({
   }
 
   if (showVariantStep) {
-    items.push({ label: service.name, onClick: onBackToServices });
+    items.push({ label: service.name, onClick: lockServiceSelection ? undefined : onBackToServices });
     items.push({ label: copy.chooseOption, current: true });
     return items;
   }
 
   if (showContactForm) {
     if (needsStaffPicker) {
-      items.push({ label: service.name, onClick: onBackToServices });
+      items.push({ label: service.name, onClick: lockServiceSelection ? undefined : onBackToServices });
       if (needsVariantPicker) items.push({ label: copy.chooseOption, onClick: onBackToVariant });
       items.push({ label: copy.chooseTeam, onClick: onBackToStaff });
       items.push({ label: copy.dateTime, onClick: onBackToDateTime });
@@ -68,14 +68,14 @@ export function buildBookingBreadcrumbItems({
   }
 
   if (showStaffStep) {
-    items.push({ label: service.name, onClick: onBackToServices });
+    items.push({ label: service.name, onClick: lockServiceSelection ? undefined : onBackToServices });
     if (needsVariantPicker) items.push({ label: copy.chooseOption, onClick: onBackToVariant });
     items.push({ label: copy.chooseTeam, current: true });
     return items;
   }
 
   if (needsStaffPicker) {
-    items.push({ label: service.name, onClick: onBackToServices });
+    items.push({ label: service.name, onClick: lockServiceSelection ? undefined : onBackToServices });
     if (needsVariantPicker) items.push({ label: copy.chooseOption, onClick: onBackToVariant });
     items.push({ label: copy.chooseTeam, onClick: onBackToStaff });
     items.push({ label: copy.dateTime, current: true });

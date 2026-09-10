@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { BookingCopy } from "@/lib/i18n";
+import { Icon } from "@/components/ui/Icon";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { StarRating } from "./StarRating";
 
@@ -15,14 +16,16 @@ interface BusinessRatingProps {
   showAttribution?: boolean;
   compactAttribution?: boolean;
   animateCount?: boolean;
+  /** "row" (default) shows all 5 stars; "single" shows one star glyph for tight columns. */
+  starDisplay?: "row" | "single";
   className?: string;
 }
 
 function reviewLabel(copy: BookingCopy, count: number, compact?: boolean) {
   const formatted = count.toLocaleString();
   if (compact) {
-    if (count === 1) return "1 review";
-    return `${formatted} reviews`;
+    if (count === 1) return copy.reviewCountSingular;
+    return copy.reviewsCount.replace("{count}", formatted);
   }
   if (count === 1) return copy.reviewOnDinaya;
   return copy.reviewsOnDinaya.replace("{count}", formatted);
@@ -36,6 +39,7 @@ export function BusinessRating({
   showAttribution = true,
   compactAttribution = false,
   animateCount = false,
+  starDisplay = "row",
   className,
 }: BusinessRatingProps) {
   if (reviewCount <= 0) return null;
@@ -44,7 +48,7 @@ export function BusinessRating({
 
   return (
     <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", className)}>
-      <StarRating rating={avgRating} size={size} />
+      {starDisplay === "row" ? <StarRating rating={avgRating} size={size} /> : null}
       {animateCount ? (
         <NumberTicker
           value={avgRating}
@@ -56,10 +60,23 @@ export function BusinessRating({
           {avgRating.toFixed(1)}
         </span>
       )}
+      {starDisplay === "single" ? (
+        <Icon
+          name="star-fill"
+          className={cn("text-amber-500 dark:text-amber-400/85", size === "md" ? "text-base" : "text-xs")}
+        />
+      ) : null}
       {showAttribution ? (
-        <span className={cn("text-muted-foreground", scoreClass)}>
-          {reviewLabel(copy, reviewCount, compactAttribution)}
-        </span>
+        <>
+          {starDisplay === "single" ? (
+            <span aria-hidden className={cn("text-muted-foreground/50", scoreClass)}>
+              ·
+            </span>
+          ) : null}
+          <span className={cn("text-muted-foreground", scoreClass)}>
+            {reviewLabel(copy, reviewCount, compactAttribution)}
+          </span>
+        </>
       ) : null}
     </div>
   );

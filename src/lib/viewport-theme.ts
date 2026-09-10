@@ -14,4 +14,8 @@ export const bookingViewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
+  // BookingThemeToggle positions itself with env(safe-area-inset-top), which
+  // only returns a real value once the page opts into drawing under the
+  // notch/Dynamic Island — otherwise it's always 0 and the inset is a no-op.
+  viewportFit: "cover",
 };

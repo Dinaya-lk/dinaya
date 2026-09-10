@@ -26,7 +26,13 @@ interface Props {
   nextAvailableDate?: string;
   onSelect: (dateStr: string) => void;
   onMonthChange?: (month: string) => void;
-  size?: "compact" | "comfortable";
+  /**
+   * "comfortable" — large touch targets for the mobile full-calendar sheet.
+   * "dense" — tighter desktop sidebar layout; still kept above real touch/
+   * readability minimums (not a 1:1 copy of the marketing demo's decorative,
+   * much smaller scale, which nobody needs to actually read or tap precisely).
+   */
+  size?: "dense" | "comfortable";
 }
 
 export default function MonthCalendar({
@@ -37,7 +43,7 @@ export default function MonthCalendar({
   nextAvailableDate,
   onSelect,
   onMonthChange,
-  size = "compact",
+  size = "dense",
 }: Props) {
   const selected = selectedDate ? new Date(selectedDate + "T12:00:00") : null;
   const [viewMonth, setViewMonth] = useState(() =>
@@ -84,15 +90,17 @@ export default function MonthCalendar({
   const canGoPrev = startOfMonth(viewMonth) > startOfMonth(minDate);
 
   return (
-    <div
-      className={`min-w-0 w-full ${comfortable ? "py-1" : "rounded-xl border border-border bg-card p-3.5"}`}
-    >
+    <div className="min-w-0 w-full py-1">
       <div className={`flex items-center justify-between ${comfortable ? "mb-4" : "mb-3"}`}>
         <button
           type="button"
           disabled={!canGoPrev}
           onClick={() => setViewMonth((m) => subMonths(m, 1))}
-          className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+          className={`flex items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
+            comfortable
+              ? "size-10 text-muted-foreground hover:bg-muted hover:text-foreground"
+              : "size-8 bg-muted text-muted-foreground hover:text-foreground"
+          }`}
           aria-label="Previous month"
         >
           <Icon name="chevron-left" className={comfortable ? "text-sm" : "text-xs"} />
@@ -103,19 +111,23 @@ export default function MonthCalendar({
         <button
           type="button"
           onClick={() => setViewMonth((m) => addMonths(m, 1))}
-          className="flex size-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className={`flex items-center justify-center rounded-lg transition-colors ${
+            comfortable
+              ? "size-10 text-muted-foreground hover:bg-muted hover:text-foreground"
+              : "size-8 bg-muted text-muted-foreground hover:text-foreground"
+          }`}
           aria-label="Next month"
         >
           <Icon name="chevron-right" className={comfortable ? "text-sm" : "text-xs"} />
         </button>
       </div>
       <div
-        className={`grid w-full min-w-0 grid-cols-7 text-center ${comfortable ? "gap-2" : "gap-0.5"}`}
+        className={`grid w-full min-w-0 grid-cols-7 text-center ${comfortable ? "gap-2" : "gap-1.5"}`}
       >
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
           <div
             key={d}
-            className={`font-semibold text-muted-foreground ${comfortable ? "pb-3 text-xs tracking-wide" : "pb-1.5 text-[10px] tracking-wide"}`}
+            className={`font-semibold text-muted-foreground ${comfortable ? "pb-3 text-xs tracking-wide" : "pb-1.5 text-[11px] tracking-wide"}`}
           >
             {comfortable ? d : d.slice(0, 3)}
           </div>
@@ -137,15 +149,15 @@ export default function MonthCalendar({
               onClick={() => !disabled && onSelect(dateStr)}
               className={`relative min-w-0 font-medium tabular-nums transition-[background-color,box-shadow,transform] ${
                 comfortable
-                  ? "mx-auto flex size-12 items-center justify-center rounded-xl text-sm"
-                  : "mx-auto flex size-11 min-h-11 min-w-11 max-w-none items-center justify-center rounded-lg text-xs"
+                  ? "mx-auto flex size-12 items-center justify-center rounded-full text-sm"
+                  : "mx-auto flex size-9 items-center justify-center rounded-full text-xs xl:size-10 xl:text-sm"
               } ${
                 !inMonth
                   ? "pointer-events-none opacity-0"
                   : isSelected
                   ? "booking-bg-accent text-white shadow-md booking-shadow-accent"
                   : disabled
-                  ? "cursor-not-allowed text-muted-foreground/45"
+                  ? "cursor-not-allowed text-muted-foreground/45 line-through"
                   : showToday
                   ? "font-semibold booking-text-accent ring-2 ring-(--booking-accent-soft)"
                   : isNextAvailable

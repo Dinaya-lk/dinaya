@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, m, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import type { Staff } from "@/db/schema";
 import type { Location } from "@/db/schema";
@@ -11,10 +11,10 @@ import type { ServicePriceVariant } from "@/lib/service-variants";
 import { formatLkr } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { bookingPanelMotion } from "@/lib/booking/booking-motion";
 import StepLocation from "./StepLocation";
 import { computeDiscountedPrice } from "@/lib/deals/pricing";
 import { BusinessRating, getBusinessRating } from "./BusinessRating";
+import { BookingPolicyAccordion } from "./BookingPolicyAccordion";
 import { BookingServicePrice } from "./BookingServicePrice";
 import { cn } from "@/lib/utils";
 
@@ -76,8 +76,6 @@ export function ServiceMetaPanel({
   onSelectLocation,
   onChangeService,
 }: ServiceMetaPanelProps) {
-  const reduceMotion = useReducedMotion() ?? false;
-  const serviceMotion = bookingPanelMotion(reduceMotion, !lockServiceSelection);
   const dateLabel = selectedDate
     ? format(parseISO(selectedDate + "T12:00:00"), "EEE, d MMM yyyy")
     : null;
@@ -133,6 +131,26 @@ export function ServiceMetaPanel({
             </div>
           </div>
 
+          {(staffLabel || anyStaff) && (
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                <Icon name={anyStaff ? "people" : "person"} className="shrink-0 text-base" />
+                <span className="text-foreground">
+                  {anyStaff ? copy.anyAvailableStaff : staffLabel}
+                </span>
+              </p>
+              {onChangeStaff && needsStaffPicker ? (
+                <button
+                  type="button"
+                  onClick={onChangeStaff}
+                  className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium booking-text-accent hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--booking-accent-soft) focus-visible:ring-offset-2"
+                >
+                  {copy.changeStaff}
+                </button>
+              ) : null}
+            </div>
+          )}
+
           {needsLocationPicker ? (
             <div className="mt-4">
               <StepLocation
@@ -178,13 +196,20 @@ export function ServiceMetaPanel({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-foreground">{business.name}</p>
             {rating ? (
-              <BusinessRating
-                avgRating={rating.avgRating}
-                reviewCount={rating.reviewCount}
-                copy={copy}
-                size="sm"
-                className="mt-1.5"
-              />
+              <Link
+                href={`/book/${business.slug}`}
+                className="mt-1.5 inline-flex rounded-xs hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--booking-accent-soft) focus-visible:ring-offset-2"
+                aria-label={copy.readReviews}
+              >
+                <BusinessRating
+                  avgRating={rating.avgRating}
+                  reviewCount={rating.reviewCount}
+                  copy={copy}
+                  size="sm"
+                  compactAttribution
+                  starDisplay="single"
+                />
+              </Link>
             ) : null}
           </div>
         </div>
@@ -200,112 +225,129 @@ export function ServiceMetaPanel({
           </div>
         ) : null}
 
-        <AnimatePresence>
-          {service ? (
-            <m.div
-              key="service-info"
-              {...serviceMotion}
-              className="mt-4 min-w-0 border-t border-border/70 pt-3"
-            >
-              {!lockServiceSelection && onChangeService ? (
-                <button
-                  type="button"
-                  onClick={onChangeService}
-                  className="mb-3 flex min-h-11 items-center gap-1 text-xs booking-text-accent hover:underline"
-                >
-                  <Icon name="chevron-left" className="text-[10px]" />
-                  {copy.back}
-                </button>
-              ) : null}
-              <h2 className="font-cal text-2xl leading-tight tracking-tight text-foreground">
-                {service.name}
-              </h2>
-              {service.description ? (
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {service.description}
-                </p>
-              ) : null}
-              <div className="mt-3">{durationPrice}</div>
-              {priceVariant ? (
-                <div className="mt-2 flex items-start justify-between gap-3">
-                  <p className="text-sm text-muted-foreground">{priceVariant.label}</p>
-                  {onChangeVariant && needsVariantPicker ? (
-                    <button
-                      type="button"
-                      onClick={onChangeVariant}
-                      className="shrink-0 text-xs font-medium booking-text-accent hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--booking-accent-soft) focus-visible:ring-offset-2"
-                    >
-                      {copy.changeOption}
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-              {(staffLabel || anyStaff) && (
-                <div className="mt-3 flex items-start justify-between gap-3">
-                  <p className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-                    <Icon name={anyStaff ? "people" : "person"} className="shrink-0 text-base" />
-                    <span className="text-foreground">
-                      {anyStaff ? copy.anyAvailableStaff : staffLabel}
-                    </span>
-                  </p>
-                  {onChangeStaff && needsStaffPicker ? (
-                    <button
-                      type="button"
-                      onClick={onChangeStaff}
-                      className="shrink-0 text-xs font-medium booking-text-accent hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--booking-accent-soft) focus-visible:ring-offset-2"
-                    >
-                      {copy.changeStaff}
-                    </button>
-                  ) : null}
-                </div>
-              )}
-              {service.depositPercent > 0 && effectivePriceLkr > 0 ? (
-                <p className="mt-3 text-xs font-medium text-foreground">
-                  <span className="text-muted-foreground">{copy.depositDue}: </span>
-                  <span className="booking-text-accent">
-                    {formatLkr(Math.ceil((price * service.depositPercent) / 100))}
-                  </span>
-                </p>
-              ) : null}
-            </m.div>
-          ) : null}
-        </AnimatePresence>
+        {service ? (
+          <div className="mt-4 min-w-0 border-t border-border/70 pt-3">
+            {!lockServiceSelection && onChangeService ? (
+              <button
+                type="button"
+                onClick={onChangeService}
+                className="mb-3 flex min-h-11 items-center gap-1 text-xs booking-text-accent hover:underline"
+              >
+                <Icon name="chevron-left" className="text-[10px]" />
+                {copy.back}
+              </button>
+            ) : null}
+            <h2 className="font-cal text-2xl leading-tight tracking-tight text-foreground">
+              {service.name}
+            </h2>
+            {service.description ? (
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {service.description}
+              </p>
+            ) : null}
+            <div className="mt-3">{durationPrice}</div>
+            {priceVariant ? (
+              <div className="mt-2 flex items-start justify-between gap-3">
+                <p className="text-sm text-muted-foreground">{priceVariant.label}</p>
+                {onChangeVariant && needsVariantPicker ? (
+                  <button
+                    type="button"
+                    onClick={onChangeVariant}
+                    className="shrink-0 text-xs font-medium booking-text-accent hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--booking-accent-soft) focus-visible:ring-offset-2"
+                  >
+                    {copy.changeOption}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+            {service.depositPercent > 0 && effectivePriceLkr > 0 ? (
+              <p className="mt-3 text-xs font-medium text-foreground">
+                <span className="text-muted-foreground">{copy.depositDue}: </span>
+                <span className="booking-text-accent">
+                  {formatLkr(Math.ceil((price * service.depositPercent) / 100))}
+                </span>
+              </p>
+            ) : null}
+            {business.cancellationPolicy || business.depositPolicy || business.bankTransferInstructions ? (
+              <div className="mt-4 -mx-1">
+                <BookingPolicyAccordion
+                  copy={copy}
+                  cancellationPolicy={business.cancellationPolicy}
+                  depositPolicy={business.depositPolicy}
+                  bankTransferInstructions={business.bankTransferInstructions}
+                  variant="embedded"
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {service && !staff && !anyStaff && !needsStaffPicker ? (
           <p className="mt-3 text-center text-sm text-amber-600">{copy.noStaff}</p>
         ) : null}
 
-        {service && timeLabel ? (
+        {staffLabel || anyStaff || (service && timeLabel) ? (
           <div className="mt-6 border-t border-border/70 pt-4">
-            <div className="space-y-2 text-sm">
-              {dateLabel ? (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Icon name="calendar3" className="size-3.5 shrink-0" />
-                  <span className="text-foreground">{dateLabel}</span>
+            {staffLabel || anyStaff ? (
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  {staff && !anyStaff ? (
+                    <Avatar className="size-9 shrink-0" data-size="sm">
+                      {staff.avatarUrl ? (
+                        <AvatarImage src={staff.avatarUrl} alt={staff.name} className="object-cover" />
+                      ) : null}
+                      <AvatarFallback className="booking-bg-accent-muted text-xs font-semibold booking-text-accent">
+                        {staff.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <Icon name="people" className="shrink-0 text-base text-muted-foreground" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-foreground">
+                      {anyStaff ? copy.anyAvailableStaff : staffLabel}
+                    </p>
+                    {staff?.bio && !anyStaff ? (
+                      <p className="truncate text-xs text-muted-foreground">{staff.bio}</p>
+                    ) : null}
+                  </div>
                 </div>
-              ) : null}
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Icon name="clock" className="size-3.5 shrink-0 booking-text-accent" />
-                <span className="font-medium text-foreground">{timeLabel}</span>
+                {onChangeStaff && needsStaffPicker ? (
+                  <button
+                    type="button"
+                    onClick={onChangeStaff}
+                    className="shrink-0 text-xs font-medium booking-text-accent hover:underline focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--booking-accent-soft) focus-visible:ring-offset-2"
+                  >
+                    {copy.changeStaff}
+                  </button>
+                ) : null}
               </div>
-            </div>
+            ) : null}
+            {service && timeLabel ? (
+              <div className={cn("space-y-2 text-sm", (staffLabel || anyStaff) && "mt-4")}>
+                {dateLabel ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Icon name="calendar3" className="size-3.5 shrink-0" />
+                    <span className="text-foreground">{dateLabel}</span>
+                  </div>
+                ) : null}
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Icon name="clock" className="size-3.5 shrink-0 booking-text-accent" />
+                  <span className="font-medium text-foreground">{timeLabel}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
-        <AnimatePresence>
-          {holdLabel && dateLabel && timeLabel ? (
-            <m.div
-              key="selected-time"
-              {...bookingPanelMotion(reduceMotion, true)}
-              className="mt-4 rounded-lg booking-bg-accent-muted px-3 py-2"
-            >
-              <p className="text-xs font-medium booking-text-accent">
-                <Icon name="clock" className="mr-1.5" />
-                {holdLabel}
-              </p>
-            </m.div>
-          ) : null}
-        </AnimatePresence>
+        {holdLabel && dateLabel && timeLabel ? (
+          <div className="mt-4 rounded-lg booking-bg-accent-muted px-3 py-2">
+            <p className="text-xs font-medium booking-text-accent">
+              <Icon name="clock" className="mr-1.5" />
+              {holdLabel}
+            </p>
+          </div>
+        ) : null}
 
         {slotUnavailable ? (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-200">

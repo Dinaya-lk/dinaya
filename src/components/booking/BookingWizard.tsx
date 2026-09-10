@@ -27,6 +27,7 @@ import { BookingWizardSkeleton } from "./BookingWizardSkeleton";
 import BookingBranding from "./BookingBranding";
 import { BookingChoiceSummary } from "./BookingChoiceSummary";
 import { BookingBreadcrumb } from "./BookingBreadcrumb";
+import { BookingBreadcrumbMobile } from "./BookingBreadcrumbMobile";
 import { BookingThemeToggle } from "./BookingThemeToggle";
 import { BookingPanel } from "./BookingPanel";
 import { buildBookingBreadcrumbItems } from "./booking-breadcrumb";
@@ -655,7 +656,7 @@ function BookingWizardInner({
     };
   }, [showBreadcrumb]);
 
-  const renderBreadcrumbChrome = () =>
+  const renderBreadcrumbChrome = (variant: "mobile" | "desktop") =>
     showBreadcrumb ? (
       <div
         className={cn(
@@ -667,7 +668,11 @@ function BookingWizardInner({
       >
         <div className="flex min-h-11 items-center gap-3">
           <div className="min-w-0 flex-1">
-            <BookingBreadcrumb items={breadcrumbItems} />
+            {variant === "mobile" ? (
+              <BookingBreadcrumbMobile items={breadcrumbItems} />
+            ) : (
+              <BookingBreadcrumb items={breadcrumbItems} />
+            )}
           </div>
           <BookingThemeToggle inline className="md:hidden" />
         </div>
@@ -677,7 +682,7 @@ function BookingWizardInner({
   const bookerCard = (
       <div className="w-full min-w-0 max-w-full booking-panel-surface rounded-none border-x-0 shadow-none lg:overflow-visible lg:rounded-xl lg:border lg:border-border lg:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] dark:lg:shadow-none dark:lg:ring-1 dark:lg:ring-white/10">
         {/* Mobile breadcrumb chrome — first in the panel so top padding is intentional */}
-        {showBreadcrumb ? <div className="md:hidden">{renderBreadcrumbChrome()}</div> : null}
+        {showBreadcrumb ? <div className="md:hidden">{renderBreadcrumbChrome("mobile")}</div> : null}
 
         <BookingAttributionCapture businessId={business.id} />
         <BookingDealsSection
@@ -754,10 +759,12 @@ function BookingWizardInner({
             <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-0 lg:grid-cols-[minmax(14rem,16rem)_minmax(0,1fr)] lg:items-stretch lg:divide-x lg:divide-border xl:grid-cols-[minmax(15rem,17rem)_minmax(0,1fr)]">
               <BookingPanel
                 area="meta"
-                className="border-b border-border pb-3 pt-0 md:border-0 md:px-5 md:pb-6 md:pt-6 lg:sticky lg:top-0 lg:z-1 lg:self-start xl:px-6"
+                className="border-b border-border pb-3 pt-0 md:border-b-0 md:px-5 md:pb-6 md:pt-6 xl:px-6"
                 {...panelMotion}
               >
-                <ServiceMetaPanel {...metaPanelProps} />
+                <div className="lg:sticky lg:top-0 lg:z-1">
+                  <ServiceMetaPanel {...metaPanelProps} />
+                </div>
               </BookingPanel>
 
               <BookingPanel area="main" className="relative z-0 min-w-0 lg:py-0" {...panelMotion}>
@@ -775,10 +782,6 @@ function BookingWizardInner({
                             ? copy.details
                             : copy.pickDateTime
                       }
-                      holdLabel={state.timeLabel ? slotHold.holdLabel : null}
-                      slotUnavailable={slotHold.slotUnavailable}
-                      slotTaken={copy.slotTaken}
-                      slotTakenAction={copy.slotTakenAction}
                     />
                   </div>
                 ) : null}
@@ -870,7 +873,7 @@ function BookingWizardInner({
 
   // Desktop: breadcrumb sits above the card. Mobile chrome is inside the panel.
   const desktopBreadcrumb =
-    showBreadcrumb ? <div className="hidden md:block">{renderBreadcrumbChrome()}</div> : null;
+    showBreadcrumb ? <div className="hidden md:block">{renderBreadcrumbChrome("desktop")}</div> : null;
 
   if (centeredBookerLayout) {
     return (

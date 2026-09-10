@@ -80,7 +80,7 @@ export function SlotListPanel({
 
   return (
     <div
-      className={`relative flex flex-col gap-5 transition-opacity ${refreshing ? "pointer-events-none opacity-50" : ""}`}
+      className={`relative flex flex-col gap-4 transition-opacity ${refreshing ? "pointer-events-none opacity-50" : ""}`}
       aria-busy={refreshing || undefined}
     >
       {PERIOD_ORDER.map((period) => {
@@ -88,10 +88,10 @@ export function SlotListPanel({
         if (periodSlots.length === 0) return null;
         return (
           <div key={period}>
-            <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {copy[PERIOD_LABEL[period]]}
             </p>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2">
               {periodSlots.map((slot) => {
                 const isSelected = slot.startUtc === selectedStartUtc;
                 const hasCalendarConflict = slotConflictsWithBusyTime(slot, busyTimes);
@@ -105,7 +105,7 @@ export function SlotListPanel({
                     }`}
                     title={hasCalendarConflict ? copy.calendarConflict : undefined}
                     onClick={() => onSelect(slot)}
-                    className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                    className={`flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border px-2.5 py-2 text-xs font-medium tabular-nums transition-[transform,background-color,border-color,box-shadow,color] duration-300 ease-out active:scale-[0.96] motion-reduce:active:scale-100 ${
                       isSelected
                         ? "booking-bg-accent border-transparent text-white booking-shadow-accent"
                         : "border-(--booking-accent-soft) booking-bg-accent-muted text-foreground hover:booking-border-accent hover:booking-bg-accent-soft"
@@ -116,7 +116,7 @@ export function SlotListPanel({
                         free — the slot stays bookable either way. */}
                     {!isSelected && (
                       <span
-                        className={`size-2 shrink-0 rounded-full ${
+                        className={`size-1.5 shrink-0 rounded-full ${
                           hasCalendarConflict ? "bg-amber-500" : "bg-[#00D492]"
                         }`}
                         aria-hidden
@@ -124,7 +124,7 @@ export function SlotListPanel({
                     )}
                     <span className="min-w-0 text-center">{slot.label}</span>
                     {isSelected && (
-                      <Icon name="check" className="shrink-0 text-xs opacity-90" />
+                      <Icon name="check" className="shrink-0 text-[10px] opacity-90" />
                     )}
                   </button>
                 );
