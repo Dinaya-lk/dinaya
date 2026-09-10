@@ -17,11 +17,11 @@ android {
         applicationId = "lk.dinaya.mobile"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 6
+        versionName = "0.3.3"
 
         buildConfigField("String", "DINAYA_API_BASE_URL", "\"$dinayaApiBaseUrl\"")
-        manifestPlaceholders["usesCleartextTraffic"] = dinayaApiBaseUrl.startsWith("http://").toString()
+        manifestPlaceholders["usesCleartextTraffic"] = "true"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,6 +43,7 @@ dependencies {
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
@@ -56,5 +57,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }

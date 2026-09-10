@@ -4,8 +4,10 @@ import { endOfDay, startOfDay } from "date-fns";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { db } from "@/db";
 import { bookings, businesses, payments, services, staff } from "@/db/schema";
+import { deviceRateLimitSuffix } from "@/lib/device-client";
 import { withRateLimit } from "@/lib/rate-limit";
-import { requireDesktopBookings } from "@/app/api/v1/desktop/_shared";
+import { requireDesktopBookings, requireDesktopWrite } from "@/app/api/v1/desktop/_shared";
+import { createDeviceWalkInBooking } from "@/lib/dashboard/device-bookings";
 
 const VALID_TABS = ["upcoming", "today", "past", "cancelled", "all"] as const;
 const VALID_STATUSES = ["pending", "confirmed", "cancelled", "completed", "no_show"] as const;
@@ -29,7 +31,7 @@ export async function GET(req: NextRequest) {
     scope: "desktop-bookings-read",
     limit: 240,
     windowSeconds: 60,
-  }, { keySuffix: `${businessId}:${deviceId ?? "unknown"}` });
+  }, { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) });
   if (!limited.ok) return limited.response;
 
   const params = req.nextUrl.searchParams;
@@ -157,4 +159,38 @@ export async function GET(req: NextRequest) {
     serverTime: now.toISOString(),
     rows: mappedRows,
   });
+}
+
+export async function POST(req: NextRequest) {
+  const authResult = await requireDesktopWrite(req);
+  if (!authResult.ok) return authResult.response;
+  const { businessId, deviceId, keyType } = authResult.context;
+
+  const limited = await withRateLimit(req, {
+    scope: "desktop-booking-create",
+    limit: 60,
+    windowSeconds: 60,
+  }, { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) });
+  if (!limited.ok) return limited.response;
+
+  const result = await createDeviceWalkInBooking(
+    businessId,
+    await req.json().catch(() => null),
+    { channel: keyType === "mobile" ? "mobile" : "desktop" },
+  );
+
+  switch (result.status) {
+    case "created":
+      return NextResponse.json(result.booking);
+    case "invalid":
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    case "not_found":
+      return NextResponse.json({ error: result.error }, { status: 404 });
+    case "conflict":
+      return NextResponse.json({ error: result.error }, { status: 409 });
+    default: {
+      const _exhaustive: never = result;
+      return _exhaustive;
+    }
+  }
 }

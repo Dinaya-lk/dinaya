@@ -1,0 +1,55 @@
+name: Mobile Release
+
+on:
+  push:
+    tags:
+      - "mobile-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Test and assemble debug APK
+        working-directory: apps/mobile
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon
+
+      - name: Name the APK
+        run: |
+          VERSION="${GITHUB_REF_NAME#mobile-v}"
+          mkdir -p dist
+          cp apps/mobile/app/build/outputs/apk/debug/app-debug.apk \
+            "dist/dinaya-mobile-${VERSION}-debug.apk"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/dinaya-mobile-${{ env.VERSION }}-debug.apk
+          name: Dinaya Mobile ${{ env.VERSION }}
+          generate_release_notes: true
+          prerelease: true
+          body: |
+            Sideloadable **debug** APK for the Dinaya merchant Android app (`lk.dinaya.mobile`).
+
+            - Version: **${{ env.VERSION }}**
+            - Signed with the Android debug keystore (not Play Store / production signing)
+            - API host: `https://dinaya-lk.vercel.app` (physical phones; emulator debug still uses local Next)
+            - Install: download the APK, enable Install unknown apps, then open the file on the phone
+
+            Sign in with your **dinaya.lk** email and password. Instant Demo Login is emulator-only.
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAnyApiKey, requireApiKey } from "@/lib/api-key-auth";
-import { desktopNativeBookingsEnabled } from "@/lib/desktop-native";
+import { requireAnyApiKey } from "@/lib/api-key-auth";
+import { grantDeveloperFullAccessForBusiness } from "@/lib/developer-access";
+import {
+  DEVICE_BOOKINGS_SCOPES,
+  DEVICE_READ_SCOPES,
+  DEVICE_WRITE_SCOPES,
+} from "@/lib/device-client";
+import { desktopNativeBookingsEnabled, mobileNativeBookingsEnabled } from "@/lib/desktop-native";
 
 export type DesktopAuthContext = {
   businessId: string;
@@ -18,29 +24,44 @@ function featureDisabledResponse() {
   );
 }
 
+function deviceModulesEnabled(businessId: string): boolean {
+  return (
+    desktopNativeBookingsEnabled(businessId) || mobileNativeBookingsEnabled(businessId)
+  );
+}
+
+async function withDeveloperAccess<T extends { ok: true; context: { businessId: string } }>(
+  result: T,
+): Promise<T> {
+  await grantDeveloperFullAccessForBusiness(result.context.businessId);
+  return result;
+}
+
 export async function requireDesktopRead(req: NextRequest) {
-  const keyResult = await requireAnyApiKey(req, ["desktop:read", "desktop:bookings"]);
+  // Accept mobile scopes too so `mobile` keys keep working on desktop paths
+  // (and vice versa) during the Android migration.
+  const keyResult = await requireAnyApiKey(req, [...DEVICE_READ_SCOPES]);
   if (!keyResult.ok) return keyResult;
-  if (!desktopNativeBookingsEnabled(keyResult.context.businessId)) {
+  if (!deviceModulesEnabled(keyResult.context.businessId)) {
     return { ok: false as const, response: featureDisabledResponse() };
   }
-  return keyResult;
+  return withDeveloperAccess(keyResult);
 }
 
 export async function requireDesktopBookings(req: NextRequest) {
-  const keyResult = await requireApiKey(req, "desktop:bookings");
+  const keyResult = await requireAnyApiKey(req, [...DEVICE_BOOKINGS_SCOPES]);
   if (!keyResult.ok) return keyResult;
-  if (!desktopNativeBookingsEnabled(keyResult.context.businessId)) {
+  if (!deviceModulesEnabled(keyResult.context.businessId)) {
     return { ok: false as const, response: featureDisabledResponse() };
   }
-  return keyResult;
+  return withDeveloperAccess(keyResult);
 }
 
 export async function requireDesktopWrite(req: NextRequest) {
-  const keyResult = await requireApiKey(req, "desktop:write");
+  const keyResult = await requireAnyApiKey(req, [...DEVICE_WRITE_SCOPES]);
   if (!keyResult.ok) return keyResult;
-  if (!desktopNativeBookingsEnabled(keyResult.context.businessId)) {
+  if (!deviceModulesEnabled(keyResult.context.businessId)) {
     return { ok: false as const, response: featureDisabledResponse() };
   }
-  return keyResult;
+  return withDeveloperAccess(keyResult);
 }

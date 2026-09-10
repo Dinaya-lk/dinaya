@@ -1,6 +1,9 @@
+import dns from "node:dns";
 import postgres from "postgres";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
+
+dns.setDefaultResultOrder?.("ipv4first");
 
 type Db = PostgresJsDatabase<typeof schema>;
 
@@ -13,7 +16,12 @@ const globalForDb = globalThis as unknown as { _db?: Db };
 
 function getDb(): Db {
   if (!globalForDb._db) {
-    const client = postgres(process.env.DATABASE_URL!, { prepare: false });
+    const client = postgres(process.env.DATABASE_URL!, {
+      prepare: false,
+      max: 20,
+      idle_timeout: 30,
+      connect_timeout: 20,
+    });
     globalForDb._db = drizzle(client, { schema });
   }
   return globalForDb._db;

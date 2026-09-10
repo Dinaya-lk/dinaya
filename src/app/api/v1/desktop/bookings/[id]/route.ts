@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { bookings, clients, services, staff } from "@/db/schema";
+import { requireDesktopBookings, requireDesktopWrite } from "@/app/api/v1/desktop/_shared";
+import { updateDeviceBooking } from "@/lib/dashboard/device-bookings";
+import { deviceRateLimitSuffix } from "@/lib/device-client";
 import { withRateLimit } from "@/lib/rate-limit";
-import { requireDesktopBookings } from "@/app/api/v1/desktop/_shared";
 
 export async function GET(
   req: NextRequest,
@@ -66,4 +68,43 @@ export async function GET(
     clientStage: row.clientStage,
     webUrl: `/dashboard/bookings/${row.id}`,
   });
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const authResult = await requireDesktopWrite(req);
+  if (!authResult.ok) return authResult.response;
+  const { businessId, deviceId, keyType } = authResult.context;
+  const { id } = await params;
+
+  const limited = await withRateLimit(req, {
+    scope: "desktop-booking-update",
+    limit: 120,
+    windowSeconds: 60,
+  }, { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) });
+  if (!limited.ok) return limited.response;
+
+  const result = await updateDeviceBooking(
+    businessId,
+    id,
+    await req.json().catch(() => null),
+    { channel: keyType === "mobile" ? "mobile" : "desktop" },
+  );
+
+  switch (result.status) {
+    case "updated":
+      return NextResponse.json(result.booking);
+    case "invalid":
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    case "not_found":
+      return NextResponse.json({ error: result.error }, { status: 404 });
+    case "conflict":
+      return NextResponse.json({ error: result.error }, { status: 409 });
+    default: {
+      const _exhaustive: never = result;
+      return _exhaustive;
+    }
+  }
 }

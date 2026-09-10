@@ -1,6 +1,11 @@
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { businesses, users } from "@/db/schema";
+import { grantDeveloperFullAccess } from "@/lib/developer-access";
+import {
+  DEVELOPER_FULL_ACCESS_PLAN,
+  isDeveloperFullAccessEmail,
+} from "@/lib/developer-access-emails";
 import { resolveEffectivePlan, type Plan } from "@/lib/plan";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
@@ -74,17 +79,27 @@ export async function getBusinessContext(): Promise<BusinessContext | null> {
     return null;
   }
 
-  const effectivePlan = resolveEffectivePlan({
-    storedPlan: business.plan,
-    planExpiresAt: business.planExpiresAt,
-  });
+  const developerAccess = isDeveloperFullAccessEmail(dbUser.email);
+  if (developerAccess) {
+    await grantDeveloperFullAccess({
+      businessId,
+      email: dbUser.email,
+    });
+  }
+
+  const effectivePlan = developerAccess
+    ? DEVELOPER_FULL_ACCESS_PLAN
+    : resolveEffectivePlan({
+        storedPlan: business.plan,
+        planExpiresAt: business.planExpiresAt,
+      });
 
   return {
     business: {
       id: business.id,
       name: business.name,
       plan: effectivePlan,
-      planExpiresAt: business.planExpiresAt ?? null,
+      planExpiresAt: developerAccess ? null : (business.planExpiresAt ?? null),
       slug: business.slug,
       language: business.language,
     },

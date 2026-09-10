@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { businesses, staff } from "@/db/schema";
+import { deviceRateLimitSuffix } from "@/lib/device-client";
 import { withRateLimit } from "@/lib/rate-limit";
 import { requireDesktopRead } from "@/app/api/v1/desktop/_shared";
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     scope: "desktop-bootstrap",
     limit: 180,
     windowSeconds: 60,
-  }, { keySuffix: `${businessId}:${deviceId ?? "unknown"}` });
+  }, { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) });
   if (!limited.ok) return limited.response;
 
   const [business] = await db

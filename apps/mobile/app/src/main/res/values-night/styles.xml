@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark launch chrome — matches site dark themeColor #0a0a0a (viewport-theme.ts). -->
+    <style name="Theme.Dinaya" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">@font/cal_sans_semibold</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">#2563EB</item>
+    </style>
+</resources>

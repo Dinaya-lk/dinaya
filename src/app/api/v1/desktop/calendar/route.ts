@@ -5,6 +5,7 @@ import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { requireDesktopBookings } from "@/app/api/v1/desktop/_shared";
 import { db } from "@/db";
 import { bookings, businesses, locations, services, staff } from "@/db/schema";
+import { deviceRateLimitSuffix } from "@/lib/device-client";
 import { withRateLimit } from "@/lib/rate-limit";
 
 const DEFAULT_TIMEZONE = "Asia/Colombo";
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     scope: "desktop-calendar-read",
     limit: 240,
     windowSeconds: 60,
-  }, { keySuffix: `${businessId}:${deviceId ?? "unknown"}` });
+  }, { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) });
   if (!limited.ok) return limited.response;
 
   const params = req.nextUrl.searchParams;

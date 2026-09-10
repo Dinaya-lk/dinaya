@@ -6,6 +6,7 @@ import { requireDesktopRead } from "@/app/api/v1/desktop/_shared";
 import { getDashboardOverviewData, serializeDashboardOverviewData } from "@/lib/dashboard/overview-data";
 import { getEntitlements, type Plan } from "@/lib/plan";
 import type { PlanUsage } from "@/lib/dashboard-usage";
+import { deviceRateLimitSuffix } from "@/lib/device-client";
 import { withRateLimit } from "@/lib/rate-limit";
 
 function trialDaysLeftFrom(planExpiresAt: Date | null): number | null {
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
       limit: 120,
       windowSeconds: 60,
     },
-    { keySuffix: `${businessId}:${deviceId ?? "unknown"}` },
+    { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) },
   );
   if (!limited.ok) return limited.response;
 

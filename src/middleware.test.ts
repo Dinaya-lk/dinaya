@@ -140,4 +140,26 @@ describe("middleware docs markdown rewrites", () => {
     expect(res.headers.get("location")).toBeNull();
     expect(res.headers.get("x-middleware-rewrite")).toBeNull();
   });
+
+  it("allows founder developer emails through /admin without PLATFORM_ADMIN_EMAILS", async () => {
+    delete process.env.PLATFORM_ADMIN_EMAILS;
+
+    const req = new NextRequest("https://dinaya.lk/admin", {
+      headers: {
+        host: "dinaya.lk",
+      },
+    });
+    Object.assign(req, {
+      auth: {
+        user: {
+          email: "suvenseoras@gmail.com",
+        },
+      },
+    });
+
+    const res = await middleware(req);
+
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+  });
 });

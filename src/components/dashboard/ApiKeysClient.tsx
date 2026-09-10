@@ -22,7 +22,7 @@ import {
 type ApiKeyRow = {
   id: string;
   name: string;
-  keyType?: "generic" | "desktop";
+  keyType?: "generic" | "desktop" | "mobile";
   deviceId?: string | null;
   deviceName?: string | null;
   scopes: string[];
@@ -111,7 +111,11 @@ export function ApiKeysClient() {
         <div>
           <p className="font-medium">{key.name}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {key.keyType === "desktop" ? "Desktop key" : "Generic key"}
+            {key.keyType === "desktop"
+              ? "Desktop key"
+              : key.keyType === "mobile"
+                ? "Mobile key"
+                : "Generic key"}
             {key.deviceName ? ` · ${key.deviceName}` : ""}
           </p>
         </div>

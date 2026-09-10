@@ -9,6 +9,9 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
+.audit-dark-mode/
+.playwright-cli/
+scratch/
 e2e/fixtures/personas.json
 e2e/fixtures/persona-journey-report.json
 

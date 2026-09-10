@@ -85,6 +85,7 @@ describe("POST /api/v1/desktop/auth/register", () => {
     expect(res.status).toBe(201);
     expect(registerBusinessAccountMock).toHaveBeenCalledOnce();
     expect(createDesktopAuthSessionMock).toHaveBeenCalledWith({
+      client: "desktop",
       deviceName: "Windows PC",
       email: "owner@example.com",
       password: "Password123!",

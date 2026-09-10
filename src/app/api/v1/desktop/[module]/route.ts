@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireDesktopRead } from "@/app/api/v1/desktop/_shared";
+import { deviceRateLimitSuffix } from "@/lib/device-client";
 import { withRateLimit } from "@/lib/rate-limit";
 import {
   getDesktopModuleData,
@@ -23,7 +24,7 @@ export async function GET(
     scope: `desktop-module-${module}`,
     limit: 180,
     windowSeconds: 60,
-  }, { keySuffix: `${businessId}:${deviceId ?? "unknown"}` });
+  }, { keySuffix: deviceRateLimitSuffix(req, businessId, deviceId) });
   if (!limited.ok) return limited.response;
 
   const payload = await getDesktopModuleData(businessId, module);

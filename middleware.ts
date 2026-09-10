@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { authConfig } from "@/auth.config";
 import { lookupCustomDomainSlug } from "@/lib/custom-domain";
+import { isAllowlistedPlatformAdminEmail } from "@/lib/developer-access-emails";
 import {
   getDocsMarkdownPathForPage,
   getInternalDocsMarkdownPath,
@@ -31,13 +32,7 @@ function wantsMarkdownResponse(req: NextRequest): boolean {
 }
 
 function isEnvPlatformAdmin(email?: string | null): boolean {
-  if (!email) return false;
-  const raw = process.env.PLATFORM_ADMIN_EMAILS ?? "";
-  return raw
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean)
-    .includes(email.toLowerCase());
+  return isAllowlistedPlatformAdminEmail(email);
 }
 
 export default auth(async (req) => {

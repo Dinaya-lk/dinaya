@@ -7,12 +7,16 @@ vi.mock("@/lib/platform-health", () => ({
   checkPaymentsHealth: vi.fn().mockResolvedValue({ status: "up", latencyMs: 1 }),
 }));
 
-import { GET } from "./route";
+import { GET, runtime } from "./route";
 
 describe("GET /api/health/payments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.HEALTH_CHECK_SECRET = "health-test-secret";
+  });
+
+  it("uses the Node runtime so collect-page-data can load platform-health", () => {
+    expect(runtime).toBe("nodejs");
   });
 
   it("returns 401 without health secret", async () => {

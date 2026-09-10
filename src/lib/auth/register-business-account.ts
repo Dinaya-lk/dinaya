@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { addDays } from "date-fns";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   availability,
@@ -15,6 +15,11 @@ import {
   users,
 } from "@/db/schema";
 import { normalizeReferralCode } from "@/lib/referrals";
+import {
+  DEVELOPER_FULL_ACCESS_PLAN,
+  isDeveloperFullAccessEmail,
+  normalizeEmail,
+} from "@/lib/developer-access-emails";
 import { TRIAL_LENGTH_DAYS } from "@/lib/plan";
 import type { RegisterInput } from "@/lib/schemas/register";
 
@@ -91,6 +96,8 @@ export async function registerBusinessAccount(input: RegisterInput): Promise<{ b
   } = input;
   const selectedBusinessType = businessType ?? "other";
   const selectedLanguage = language ?? "en";
+  const normalizedEmail = normalizeEmail(email);
+  const developerAccess = isDeveloperFullAccessEmail(normalizedEmail);
   let referredByBusinessId: string | null = null;
 
   if (referrerCode) {
@@ -116,7 +123,7 @@ export async function registerBusinessAccount(input: RegisterInput): Promise<{ b
   const [existingUser] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, email))
+    .where(sql`lower(${users.email}) = ${normalizedEmail}`)
     .limit(1);
 
   if (existingUser) {
@@ -144,7 +151,7 @@ export async function registerBusinessAccount(input: RegisterInput): Promise<{ b
         id: businessId,
         slug,
         name: businessName,
-        email,
+        email: normalizedEmail,
         businessType: selectedBusinessType,
         language: selectedLanguage,
         referralCode: slug,
@@ -152,15 +159,15 @@ export async function registerBusinessAccount(input: RegisterInput): Promise<{ b
         signupUtmSource: utmSource || null,
         signupUtmMedium: utmMedium || null,
         signupUtmCampaign: utmCampaign || null,
-        plan: "trial",
-        planExpiresAt: addDays(new Date(), TRIAL_LENGTH_DAYS),
+        plan: developerAccess ? DEVELOPER_FULL_ACCESS_PLAN : "trial",
+        planExpiresAt: developerAccess ? null : addDays(new Date(), TRIAL_LENGTH_DAYS),
         cancellationPolicy: "Please contact the business as early as possible if you need to cancel or reschedule.",
         depositPolicy: "Some services may require a deposit to reduce no-shows.",
       });
       await tx.insert(users).values({
         businessId,
         name,
-        email,
+        email: normalizedEmail,
         passwordHash,
         role: "owner",
       });

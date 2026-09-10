@@ -1,9 +1,6 @@
 import {NextResponse, NextRequest} from "next/server";
 import { requireApiBusiness } from "@/lib/api-auth";
-import { db } from "@/db";
-import { businesses, reviews } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
-import { generateAiCopy } from "@/lib/ai/copy";
+import { generateReviewReplyForBusiness } from "@/lib/dashboard/review-reply-ai";
 import { PlanRequiredError, requirePro } from "@/lib/plan";
 
 interface Ctx { params: Promise<{ id: string }> }
@@ -23,35 +20,13 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     throw error;
   }
 
-  const [review] = await db
-    .select({
-      clientName: reviews.clientName,
-      rating: reviews.rating,
-      comment: reviews.comment,
-    })
-    .from(reviews)
-    .where(and(eq(reviews.id, id), eq(reviews.businessId, businessId)))
-    .limit(1);
-
-  if (!review) {
+  const generated = await generateReviewReplyForBusiness(businessId, id);
+  if (!generated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const [business] = await db
-    .select({ name: businesses.name })
-    .from(businesses)
-    .where(eq(businesses.id, businessId))
-    .limit(1);
-
-  const generated = await generateAiCopy({
-    feature: "reviewReplies",
-    businessName: business?.name ?? "Our business",
-    clientName: review.clientName,
-    extra: `Rating: ${review.rating}/5. Review: ${review.comment ?? "No written comment."}`,
-  });
-
   return NextResponse.json({
-    reply: generated.body,
+    reply: generated.reply,
     source: generated.source,
   });
 }

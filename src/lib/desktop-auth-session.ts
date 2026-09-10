@@ -1,18 +1,31 @@
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, businesses, users } from "@/db/schema";
 import { generateApiKey } from "@/lib/api-keys";
-import { desktopNativeBookingsEnabled } from "@/lib/desktop-native";
+import { grantDeveloperFullAccess } from "@/lib/developer-access";
+import {
+  DEVELOPER_FULL_ACCESS_PLAN,
+  isDeveloperFullAccessEmail,
+  normalizeEmail,
+} from "@/lib/developer-access-emails";
+import type { DeviceClient } from "@/lib/device-client";
+import { desktopNativeBookingsEnabled, mobileNativeBookingsEnabled } from "@/lib/desktop-native";
+
+export const DESKTOP_DEVICE_SCOPES = ["desktop:read", "desktop:bookings", "desktop:write"];
+export const MOBILE_DEVICE_SCOPES = ["mobile:read", "mobile:bookings", "mobile:write"];
 
 export type DesktopAuthSession = {
+  /** Legacy alias — always present so older clients keep working. Same value as `mobileKey` for mobile sessions. */
   desktopKey: string;
+  /** Preferred field for Android clients. Same value as `desktopKey`. */
+  mobileKey: string;
   auth: {
     deviceId: string;
     deviceName: string;
     keyId: string;
-    keyType: "desktop";
+    keyType: "desktop" | "mobile";
   };
   business: {
     customDomain: string | null;
@@ -24,6 +37,7 @@ export type DesktopAuthSession = {
   };
   featureFlags: {
     desktopNativeBookings: boolean;
+    mobileNativeBookings: boolean;
   };
   user: {
     email: string;
@@ -47,12 +61,13 @@ export async function createDesktopAuthSession(input: {
   deviceName: string;
   email: string;
   password: string;
+  client?: DeviceClient;
 }): Promise<DesktopAuthSession> {
-  const email = input.email.trim().toLowerCase();
+  const email = normalizeEmail(input.email);
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email))
+    .where(sql`lower(${users.email}) = ${email}`)
     .limit(1);
 
   if (!user) {
@@ -83,8 +98,18 @@ export async function createDesktopAuthSession(input: {
     throw new DesktopAuthError("Invalid email or password.", 401);
   }
 
+  await grantDeveloperFullAccess({
+    businessId: business.id,
+    email: user.email,
+  });
+  const plan = isDeveloperFullAccessEmail(user.email)
+    ? DEVELOPER_FULL_ACCESS_PLAN
+    : business.plan;
+
   const deviceId = randomUUID();
-  const deviceName = input.deviceName.trim() || "Dinaya Desktop";
+  const client: DeviceClient = input.client ?? "desktop";
+  const isMobile = client === "mobile";
+  const deviceName = input.deviceName.trim() || (isMobile ? "Dinaya Android" : "Dinaya Desktop");
   const { keyHash, rawKey } = generateApiKey();
   const [createdKey] = await db
     .insert(apiKeys)
@@ -93,9 +118,9 @@ export async function createDesktopAuthSession(input: {
       deviceId,
       deviceName,
       keyHash,
-      keyType: "desktop",
-      name: `Desktop - ${deviceName}`,
-      scopes: ["desktop:read", "desktop:bookings", "desktop:write"],
+      keyType: isMobile ? "mobile" : "desktop",
+      name: `${isMobile ? "Mobile" : "Desktop"} - ${deviceName}`,
+      scopes: isMobile ? [...MOBILE_DEVICE_SCOPES] : [...DESKTOP_DEVICE_SCOPES],
     })
     .returning({ id: apiKeys.id });
 
@@ -104,19 +129,21 @@ export async function createDesktopAuthSession(input: {
       deviceId,
       deviceName,
       keyId: createdKey.id,
-      keyType: "desktop",
+      keyType: isMobile ? "mobile" : "desktop",
     },
     business: {
       customDomain: business.customDomain,
       id: business.id,
       name: business.name,
-      plan: business.plan,
+      plan,
       slug: business.slug,
       timezone: business.timezone,
     },
     desktopKey: rawKey,
+    mobileKey: rawKey,
     featureFlags: {
       desktopNativeBookings: desktopNativeBookingsEnabled(business.id),
+      mobileNativeBookings: mobileNativeBookingsEnabled(business.id),
     },
     user: {
       email: user.email,

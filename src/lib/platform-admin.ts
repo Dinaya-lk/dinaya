@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
 import { auth } from "@/auth";
+import { isAllowlistedPlatformAdminEmail } from "@/lib/developer-access-emails";
 import { isPlatformAdmin as isPlatformAdminAsync } from "@/lib/platform-admin-members";
 
 export type PlatformAdminContext = {
@@ -13,13 +14,7 @@ type AuthSession = Session | null;
 
 /** @deprecated Use async isPlatformAdmin from platform-admin-members */
 export function isPlatformAdmin(email?: string | null): boolean {
-  if (!email) return false;
-  const raw = process.env.PLATFORM_ADMIN_EMAILS ?? "";
-  return raw
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-    .includes(email.toLowerCase());
+  return isAllowlistedPlatformAdminEmail(email);
 }
 
 async function resolvePlatformAdminContext(session: AuthSession): Promise<PlatformAdminContext | null> {

@@ -2,12 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const requireDesktopReadMock = vi.hoisted(() => vi.fn());
+const requireDesktopWriteMock = vi.hoisted(() => vi.fn());
 const withRateLimitMock = vi.hoisted(() => vi.fn());
 const getDealsDashboardListMock = vi.hoisted(() => vi.fn());
+const createDeviceDealMock = vi.hoisted(() => vi.fn());
 const requireProMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/app/api/v1/desktop/_shared", () => ({
   requireDesktopRead: requireDesktopReadMock,
+  requireDesktopWrite: requireDesktopWriteMock,
+}));
+
+vi.mock("@/lib/dashboard/device-deals", () => ({
+  createDeviceDeal: createDeviceDealMock,
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -27,7 +34,52 @@ vi.mock("@/lib/plan", async () => {
   };
 });
 
-import { GET } from "./route";
+import { GET, POST } from "./route";
+
+const BUSINESS_ID = "00000000-0000-4000-8000-000000000001";
+
+const createdDeal = {
+  deal: {
+    apptWindowEnd: "2026-06-01T17:00:00.000Z",
+    apptWindowStart: "2026-06-01T09:00:00.000Z",
+    conversionPercent: null,
+    createdAt: "2026-05-28T09:00:00.000Z",
+    dealWindowEnd: "2026-05-30T09:00:00.000Z",
+    dealWindowStart: "2026-05-28T09:00:00.000Z",
+    discountPercent: 20,
+    discountedPriceLkr: 2000,
+    displayStatus: "active",
+    id: "deal_1",
+    impressionCount: 0,
+    slotsRedeemed: 0,
+    slotsRemaining: 5,
+    slotsTotal: 5,
+    status: "active",
+  },
+  location: { id: "location_1", name: "Kandy", timezone: "Asia/Colombo" },
+  recentBookings: [],
+  service: {
+    depositPercent: 0,
+    durationMinutes: 45,
+    id: "service_1",
+    name: "Haircut",
+    priceLkr: 2500,
+    requiresPayment: true,
+  },
+  staff: { id: "staff_1", name: "Ashan" },
+};
+
+const createBody = {
+  serviceId: "00000000-0000-4000-8000-000000000010",
+  locationId: "00000000-0000-4000-8000-000000000012",
+  staffId: "00000000-0000-4000-8000-000000000011",
+  discountPercent: 20,
+  slotsTotal: 5,
+  dealWindowStart: "2026-05-28T09:00:00.000Z",
+  dealWindowEnd: "2026-05-30T09:00:00.000Z",
+  apptWindowStart: "2026-06-01T09:00:00.000Z",
+  apptWindowEnd: "2026-06-01T17:00:00.000Z",
+};
 
 describe("GET /api/v1/desktop/deals", () => {
   beforeEach(() => {
@@ -118,5 +170,121 @@ describe("GET /api/v1/desktop/deals", () => {
     expect(res.status).toBe(400);
     expect(body.error).toBe("status is invalid.");
     expect(getDealsDashboardListMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/v1/desktop/deals", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    withRateLimitMock.mockResolvedValue({ ok: true });
+    requireDesktopWriteMock.mockResolvedValue({
+      ok: true,
+      context: { businessId: BUSINESS_ID, deviceId: "device_1" },
+    });
+    requireProMock.mockResolvedValue(undefined);
+    createDeviceDealMock.mockResolvedValue({
+      status: "created",
+      deal: createdDeal,
+    });
+  });
+
+  it("returns 401 when desktop write scope is missing", async () => {
+    requireDesktopWriteMock.mockResolvedValue({
+      ok: false,
+      response: Response.json({ error: "Unauthorized" }, { status: 401 }),
+    });
+
+    const req = new NextRequest("http://localhost/api/v1/desktop/deals", {
+      method: "POST",
+      body: JSON.stringify(createBody),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(401);
+    expect(requireProMock).not.toHaveBeenCalled();
+    expect(createDeviceDealMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 402 when deals are not on the current plan", async () => {
+    const { PlanRequiredError } = await import("@/lib/plan");
+    requireProMock.mockRejectedValue(new PlanRequiredError("Deals require the Pro plan."));
+
+    const req = new NextRequest("http://localhost/api/v1/desktop/deals", {
+      method: "POST",
+      body: JSON.stringify(createBody),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(402);
+    expect(body.error).toBe("Deals require the Pro plan.");
+    expect(createDeviceDealMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 402 when notifyClients requires WhatsApp/SMS", async () => {
+    const { PlanRequiredError } = await import("@/lib/plan");
+    requireProMock
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new PlanRequiredError("WhatsApp & SMS requires the Pro plan."));
+
+    const req = new NextRequest("http://localhost/api/v1/desktop/deals", {
+      method: "POST",
+      body: JSON.stringify({ ...createBody, notifyClients: true }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(402);
+    expect(body.error).toBe("Notify clients requires WhatsApp/SMS on Pro or Max.");
+    expect(requireProMock).toHaveBeenNthCalledWith(1, BUSINESS_ID, "deals");
+    expect(requireProMock).toHaveBeenNthCalledWith(2, BUSINESS_ID, "whatsappSms");
+    expect(createDeviceDealMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the helper rejects the body", async () => {
+    createDeviceDealMock.mockResolvedValue({
+      status: "invalid",
+      error: "Please check the deal details.",
+    });
+
+    const req = new NextRequest("http://localhost/api/v1/desktop/deals", {
+      method: "POST",
+      body: JSON.stringify({ discountPercent: 5 }),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Please check the deal details.");
+  });
+
+  it("creates a deal and returns dashboard detail", async () => {
+    const req = new NextRequest("http://localhost/api/v1/desktop/deals", {
+      method: "POST",
+      body: JSON.stringify(createBody),
+      headers: { "content-type": "application/json" },
+    });
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(requireProMock).toHaveBeenCalledWith(BUSINESS_ID, "deals");
+    expect(withRateLimitMock).toHaveBeenCalledWith(
+      expect.any(NextRequest),
+      {
+        scope: "desktop-deal-create",
+        limit: 90,
+        windowSeconds: 60,
+      },
+      { keySuffix: `${BUSINESS_ID}:device_1` },
+    );
+    expect(createDeviceDealMock).toHaveBeenCalledWith(BUSINESS_ID, createBody);
+    expect(body.deal).toMatchObject({ id: "deal_1", status: "active", discountPercent: 20 });
+    expect(body.webUrl).toBe("/dashboard/deals");
+    expect(body.serverTime).toEqual(expect.any(String));
   });
 });
