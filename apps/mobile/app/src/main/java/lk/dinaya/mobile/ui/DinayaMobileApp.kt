@@ -26,9 +26,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -198,6 +200,7 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
     val context = LocalContext.current
     var showAdvancedServer by remember { mutableStateOf(false) }
 
+    val reduceMotion = LocalReduceMotion.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -207,10 +210,12 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 24.dp),
     ) {
-        BrandLockup()
+        BrandLockup(modifier = Modifier.dinayaStaggerEnter(0))
         Spacer(modifier = Modifier.height(28.dp))
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .dinayaStaggerEnter(1),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -355,7 +360,11 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
                         )
                     }
 
-                    AnimatedVisibility(visible = showAdvancedServer) {
+                    AnimatedVisibility(
+                        visible = showAdvancedServer,
+                        enter = dinayaExpandEnter(reduceMotion),
+                        exit = dinayaExpandExit(reduceMotion),
+                    ) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             AuthField(
                                 value = state.baseUrl,
@@ -500,6 +509,7 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentWindowInsets = WindowInsets.statusBars,
         bottomBar = {
             DinayaBottomBar(
                 activeKey = activeTabKey,
@@ -509,13 +519,13 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             )
         },
     ) { padding ->
-        // Native pull-to-refresh equivalent for Overview / Bookings / Calendar.
+        // Content draws behind the floating glass tab bar so the chrome reads as liquid glass.
         PullToRefreshBox(
             isRefreshing = state.isLoading,
             onRefresh = viewModel::refreshSelectedSection,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding())
                 .background(MaterialTheme.colorScheme.surfaceContainerLow),
         ) {
         Column(
@@ -546,7 +556,7 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             AnimatedContent(
                 targetState = selectedSection.key,
                 transitionSpec = {
-                    dinayaSectionEnter(reduceMotion).togetherWith(dinayaSectionExit(reduceMotion))
+                    dinayaSectionTransition(initialState, targetState, reduceMotion)
                 },
                 label = "sectionTransition",
             ) { sectionKey ->
@@ -760,7 +770,7 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(96.dp))
         }
         }
     }
@@ -770,8 +780,10 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             onDismissRequest = { moreOpen = false },
             sheetState = sheetState,
             shape = DinayaRadiusSheet,
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = dinayaSheetContainerColor(dark),
             contentColor = MaterialTheme.colorScheme.onSurface,
+            scrimColor = dinayaSheetScrimColor(dark),
+            tonalElevation = 0.dp,
         ) {
             MoreSheetContent(
                 activeKey = selectedSection.key,
@@ -872,6 +884,7 @@ internal fun DashboardTopChrome(
         ThemePreference.LIGHT -> false
         ThemePreference.DARK -> true
     }
+    val reduceMotion = LocalReduceMotion.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -887,24 +900,30 @@ internal fun DashboardTopChrome(
                     onClick = onToggleTheme,
                     modifier = Modifier
                         .size(44.dp)
-                        .dinayaGlass(CircleShape, dark),
+                        .dinayaGlass(CircleShape, dark, reduceMotion),
                 ) {
-                    Icon(
-                        imageVector = when (themePreference) {
-                            ThemePreference.DARK -> Icons.Filled.LightMode
-                            ThemePreference.LIGHT -> Icons.Filled.DarkMode
-                            ThemePreference.SYSTEM -> Icons.Filled.AutoAwesome
-                        },
-                        contentDescription = "Toggle theme",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
-                    )
+                    AnimatedContent(
+                        targetState = themePreference,
+                        transitionSpec = { dinayaIconSwapTransition(reduceMotion) },
+                        label = "themeIcon",
+                    ) { preference ->
+                        Icon(
+                            imageVector = when (preference) {
+                                ThemePreference.DARK -> Icons.Filled.LightMode
+                                ThemePreference.LIGHT -> Icons.Filled.DarkMode
+                                ThemePreference.SYSTEM -> Icons.Filled.AutoAwesome
+                            },
+                            contentDescription = "Toggle theme",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
 
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .dinayaGlass(CircleShape, dark),
+                        .dinayaGlass(CircleShape, dark, reduceMotion),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -960,7 +979,7 @@ internal fun DashboardTopChrome(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .dinayaGlass(DinayaRadiusPill, dark),
+                .dinayaGlass(DinayaRadiusPill, dark, reduceMotion),
         )
     }
 }
@@ -986,7 +1005,7 @@ internal fun PlanBanner(plan: String, onOpenBilling: () -> Unit) {
                 ),
                 DinayaRadiusButton,
             )
-            .clickable { onOpenBilling() }
+            .bounceClick { onOpenBilling() }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -1122,7 +1141,7 @@ internal fun OverviewScreen(
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                todayBookings.forEach { booking ->
+                todayBookings.forEachIndexed { index, booking ->
                     key(booking.id) {
                         BookingCard(
                             booking = booking,
@@ -1130,6 +1149,7 @@ internal fun OverviewScreen(
                             dark = dark,
                             onClick = { viewModel.selectBooking(booking) },
                             onRequestStatus = onRequestStatus,
+                            modifier = Modifier.dinayaStaggerEnter(index),
                         )
                     }
                 }
@@ -1144,7 +1164,7 @@ internal fun OverviewScreen(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                overview.nextRows.forEach { booking ->
+                overview.nextRows.forEachIndexed { index, booking ->
                     key(booking.id) {
                         BookingCard(
                             booking = booking,
@@ -1152,6 +1172,7 @@ internal fun OverviewScreen(
                             dark = dark,
                             onClick = { viewModel.selectBooking(booking) },
                             onRequestStatus = onRequestStatus,
+                            modifier = Modifier.dinayaStaggerEnter(index),
                         )
                     }
                 }
@@ -1439,7 +1460,7 @@ internal fun BookingsScreen(
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                filtered.forEach { booking ->
+                filtered.forEachIndexed { index, booking ->
                     key(booking.id) {
                         BookingCard(
                             booking = booking,
@@ -1447,6 +1468,7 @@ internal fun BookingsScreen(
                             dark = dark,
                             onClick = { viewModel.selectBooking(booking) },
                             onRequestStatus = onRequestStatus,
+                            modifier = Modifier.dinayaStaggerEnter(index),
                         )
                     }
                 }
@@ -1523,7 +1545,7 @@ internal fun CalendarScreen(
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                rows.forEach { booking ->
+                rows.forEachIndexed { index, booking ->
                     key(booking.id) {
                         BookingCard(
                             booking = booking,
@@ -1531,6 +1553,7 @@ internal fun CalendarScreen(
                             dark = dark,
                             onClick = { viewModel.selectBooking(booking) },
                             onRequestStatus = onRequestStatus,
+                            modifier = Modifier.dinayaStaggerEnter(index),
                         )
                     }
                 }
@@ -1630,8 +1653,10 @@ internal fun BookingDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = dinayaSheetContainerColor(dark),
         contentColor = MaterialTheme.colorScheme.onSurface,
+        scrimColor = dinayaSheetScrimColor(dark),
+        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -1853,8 +1878,10 @@ internal fun ClientDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = dinayaSheetContainerColor(dark),
         contentColor = MaterialTheme.colorScheme.onSurface,
+        scrimColor = dinayaSheetScrimColor(dark),
+        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -1949,6 +1976,7 @@ internal fun BookingCard(
     dark: Boolean,
     onClick: () -> Unit,
     onRequestStatus: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val leftStripeColor = statusLeftBorderColor(booking.status)
@@ -1958,7 +1986,7 @@ internal fun BookingCard(
         shape = DinayaRadiusCard,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .drawBehind {
                 val strokeWidth = 3.5.dp.toPx()
@@ -2264,14 +2292,16 @@ internal fun BookingShareCard(
 @Composable
 internal fun OverviewStatsGrid(stats: List<lk.dinaya.mobile.data.OverviewStat>) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        stats.chunked(2).forEach { row ->
+        stats.chunked(2).forEachIndexed { rowIndex, row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                row.forEach { stat ->
+                row.forEachIndexed { colIndex, stat ->
                     SiteStatCard(
                         label = stat.label.uppercase(),
                         value = stat.value,
                         delta = stat.delta,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .dinayaStaggerEnter(rowIndex * 2 + colIndex),
                     )
                 }
                 if (row.size == 1) {
@@ -2690,12 +2720,13 @@ internal fun DinayaBottomBar(
     onOpenMore: () -> Unit,
 ) {
     val dark = dinayaIsDark(MaterialTheme.colorScheme)
+    val reduceMotion = LocalReduceMotion.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .dinayaGlass(DinayaRadiusChrome, dark),
+            .dinayaGlass(DinayaRadiusChrome, dark, reduceMotion),
     ) {
         Row(
             modifier = Modifier
@@ -2736,7 +2767,6 @@ internal fun BottomTabCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val haptic = LocalHapticFeedback.current
     val scheme = MaterialTheme.colorScheme
     val content = if (active) scheme.primary else scheme.onSurfaceVariant
     val reduceMotion = LocalReduceMotion.current
@@ -2745,17 +2775,16 @@ internal fun BottomTabCell(
         animationSpec = dinayaNoBounceSpring(),
         label = "tabIconScale",
     )
+    val highlight by animateFloatAsState(
+        targetValue = if (active) 1f else 0f,
+        animationSpec = if (reduceMotion) tween(0) else dinayaNoBounceSpring(),
+        label = "tabHighlight",
+    )
 
     Column(
         modifier = modifier
             .heightIn(min = 56.dp)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onClick()
-            }
+            .dinayaBounceClick(scaleDown = 0.96f, onClick = onClick)
             .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -2764,14 +2793,18 @@ internal fun BottomTabCell(
             modifier = Modifier.size(44.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (active) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clip(CircleShape)
-                        .background(scheme.primary.copy(alpha = if (dark) 0.22f else 0.14f)),
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        val scale = 0.25f + (0.75f * highlight)
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = highlight
+                    }
+                    .clip(CircleShape)
+                    .background(scheme.primary.copy(alpha = if (dark) 0.22f else 0.14f)),
+            )
             Icon(
                 imageVector = icon,
                 contentDescription = label,

@@ -1,5 +1,7 @@
 package lk.dinaya.mobile.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -23,10 +26,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -36,20 +41,27 @@ import lk.dinaya.mobile.data.StaffSummary
 // ——— Day / Week view toggle (primary blue, theme-driven surfaces) —————————
 @Composable
 internal fun CalendarViewToggle(view: String, onChange: (String) -> Unit) {
+    val reduceMotion = LocalReduceMotion.current
     Row(
         modifier = Modifier
             .clip(DinayaRadiusPill)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(2.dp),
+            .dinayaGlass(DinayaRadiusPill, dinayaIsDark(MaterialTheme.colorScheme), reduceMotion)
+            .padding(3.dp),
     ) {
         listOf("day" to "Day", "week" to "Week").forEach { (vKey, vLabel) ->
             val active = view == vKey
+            val highlight by animateFloatAsState(
+                targetValue = if (active) 1f else 0f,
+                animationSpec = if (reduceMotion) tween(0) else dinayaNoBounceSpring(),
+                label = "calendarToggleHighlight",
+            )
             Box(
                 modifier = Modifier
+                    .heightIn(min = 36.dp)
                     .clip(DinayaRadiusPill)
-                    .background(if (active) MaterialTheme.colorScheme.surface else Color.Transparent)
-                    .clickable { onChange(vKey) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.22f + (0.78f * highlight)))
+                    .dinayaBounceClick(scaleDown = 0.96f, onClick = { onChange(vKey) })
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
                     text = vLabel,
@@ -57,6 +69,7 @@ internal fun CalendarViewToggle(view: String, onChange: (String) -> Unit) {
                     fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
                     color = if (active) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.graphicsLayer { alpha = 0.72f + (0.28f * highlight) },
                 )
             }
         }

@@ -52,6 +52,8 @@ Debug default API host is `https://dinaya-lk.vercel.app` unless you pass `-Pdina
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
+Version **0.3.4** adds Apple-style springs (tabs, section changes, press scale 0.96), staggered list enters, liquid-glass chrome that content can scroll under, and translucent sheets. Animations honor Android animator duration scale (reduced motion).
+
 ## Next
 
 Android FCM device registration for new-booking and reminder pushes remains future work, after a Firebase project and `google-services.json` are in place.
