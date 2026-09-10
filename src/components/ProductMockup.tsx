@@ -21,7 +21,7 @@ type PersonaData = {
   icon: string;
   categoryName: string;
   accent: string;
-  services: { name: string; duration: string; price: string; selected: boolean }[];
+  services: { name: string; description: string; duration: string; price: string; selected: boolean }[];
   slots: Slot[];
   trust: { rating: number; bookings: number };
 };
@@ -42,9 +42,9 @@ const personas: PersonaData[] = [
     categoryName: "Hair Services",
     accent: "#2563eb",
     services: [
-      { name: "Haircut & Style", duration: "45 min", price: "Rs. 2,500", selected: true },
-      { name: "Facial Treatment", duration: "60 min", price: "Rs. 3,800", selected: false },
-      { name: "Eyebrow Threading", duration: "20 min", price: "Rs. 800", selected: false },
+      { name: "Haircut & Style", description: "Wash, cut, and blow-dry finish.", duration: "45 min", price: "Rs. 2,500", selected: true },
+      { name: "Facial Treatment", description: "Deep cleanse with hydrating mask.", duration: "60 min", price: "Rs. 3,800", selected: false },
+      { name: "Eyebrow Threading", description: "Precise natural shape, no wax.", duration: "20 min", price: "Rs. 800", selected: false },
     ],
     slots: [
       { label: "9:00 AM" },
@@ -65,9 +65,9 @@ const personas: PersonaData[] = [
     categoryName: "Barber",
     accent: "#0f766e",
     services: [
-      { name: "Skin Fade", duration: "35 min", price: "Rs. 1,800", selected: true },
-      { name: "Beard Trim", duration: "20 min", price: "Rs. 900", selected: false },
-      { name: "Hot Towel Shave", duration: "40 min", price: "Rs. 2,200", selected: false },
+      { name: "Skin Fade", description: "Clippers and straight-razor line-up.", duration: "35 min", price: "Rs. 1,800", selected: true },
+      { name: "Beard Trim", description: "Shape and edge, hot towel finish.", duration: "20 min", price: "Rs. 900", selected: false },
+      { name: "Hot Towel Shave", description: "Traditional straight-razor shave.", duration: "40 min", price: "Rs. 2,200", selected: false },
     ],
     slots: [
       { label: "10:00 AM" },
@@ -88,9 +88,9 @@ const personas: PersonaData[] = [
     categoryName: "Dental",
     accent: "#0284c7",
     services: [
-      { name: "Dental Check-up", duration: "30 min", price: "Rs. 3,500", selected: true },
-      { name: "Scaling & Polish", duration: "45 min", price: "Rs. 6,000", selected: false },
-      { name: "Whitening Consult", duration: "20 min", price: "Rs. 2,000", selected: false },
+      { name: "Dental Check-up", description: "Full exam and X-ray review.", duration: "30 min", price: "Rs. 3,500", selected: true },
+      { name: "Scaling & Polish", description: "Plaque removal and stain polish.", duration: "45 min", price: "Rs. 6,000", selected: false },
+      { name: "Whitening Consult", description: "Shade check and treatment plan.", duration: "20 min", price: "Rs. 2,000", selected: false },
     ],
     slots: [
       { label: "8:30 AM" },
@@ -111,9 +111,9 @@ const personas: PersonaData[] = [
     categoryName: "Music lessons",
     accent: "#7c3aed",
     services: [
-      { name: "Piano — 45 min", duration: "45 min", price: "Rs. 2,000", selected: true },
-      { name: "Guitar — 30 min", duration: "30 min", price: "Rs. 1,500", selected: false },
-      { name: "Trial Lesson", duration: "30 min", price: "Rs. 1,000", selected: false },
+      { name: "Piano — 45 min", description: "One-on-one, beginner to advanced.", duration: "45 min", price: "Rs. 2,000", selected: true },
+      { name: "Guitar — 30 min", description: "Chords, technique, and song practice.", duration: "30 min", price: "Rs. 1,500", selected: false },
+      { name: "Trial Lesson", description: "Meet your teacher, no commitment.", duration: "30 min", price: "Rs. 1,000", selected: false },
     ],
     slots: [
       { label: "3:00 PM" },
@@ -134,9 +134,9 @@ const personas: PersonaData[] = [
     categoryName: "Wellness",
     accent: "#059669",
     services: [
-      { name: "Signature Massage", duration: "60 min", price: "Rs. 5,500", selected: true },
-      { name: "Deep Cleanse Facial", duration: "50 min", price: "Rs. 4,800", selected: false },
-      { name: "Head & Shoulder", duration: "30 min", price: "Rs. 2,800", selected: false },
+      { name: "Signature Massage", description: "Full-body, pressure adjusted to you.", duration: "60 min", price: "Rs. 5,500", selected: true },
+      { name: "Deep Cleanse Facial", description: "Extraction, mask, and hydration.", duration: "50 min", price: "Rs. 4,800", selected: false },
+      { name: "Head & Shoulder", description: "Tension relief for neck and back.", duration: "30 min", price: "Rs. 2,800", selected: false },
     ],
     slots: [
       { label: "10:00 AM" },
@@ -470,7 +470,10 @@ function CustomerBookingDesktop({
   return (
     <div
       className="flex h-full flex-col overflow-hidden p-4 transition-[background-color] duration-500 ease-out sm:p-5"
-      style={{ ...demoAccentStyle(persona.accent, isDark), backgroundColor: "var(--demo-chrome)" }}
+      style={{
+        ...demoAccentStyle(persona.accent, isDark),
+        backgroundColor: "color-mix(in srgb, var(--demo-accent) 8%, var(--demo-chrome))",
+      }}
     >
       <div className="mb-3 shrink-0">
         <BookingContextNav backLabel="All services" categoryLabel={persona.categoryName} />
@@ -499,7 +502,7 @@ function CustomerBookingDesktop({
           <div className="mt-4 border-t border-white/20 pt-4">
             <p className="text-base font-semibold leading-tight text-white">{selectedService.name}</p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-white/80 text-pretty">
-              {persona.blurb}
+              {selectedService.description}
             </p>
             <p className="mt-3 flex items-center gap-1.5 text-xs text-white/85">
               <Icon name="clock" className="text-[10px]" />
@@ -664,9 +667,10 @@ function ThemeSwitcher({
               onClick={() => onSelect(index)}
               className={`relative inline-flex min-h-10 items-center gap-2 overflow-hidden rounded-lg px-3 py-2 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.96] ${
                 active
-                  ? "bg-foreground text-background"
+                  ? "text-white"
                   : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
               }`}
+              style={active ? { backgroundColor: p.accent } : undefined}
             >
               {active && playing && !reduceMotion ? (
                 <motion.span
@@ -681,7 +685,7 @@ function ThemeSwitcher({
                 className={`size-2.5 shrink-0 rounded-full ring-2 ring-white/40 transition-transform duration-300 dark:ring-black/30 ${
                   active ? "scale-110" : ""
                 }`}
-                style={{ backgroundColor: p.accent }}
+                style={{ backgroundColor: active ? "#fff" : p.accent }}
                 aria-hidden
               />
               {p.label}

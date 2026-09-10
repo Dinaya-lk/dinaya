@@ -41,8 +41,7 @@ export function LandingHero() {
         </p>
 
         <h1 className="landing-reveal landing-reveal-delay-1 font-cal mt-5 text-3xl tracking-tight text-balance sm:text-4xl md:text-5xl">
-          Stop the{" "}
-          <span className="text-primary">WhatsApp chaos.</span>
+          Stop the WhatsApp chaos.
           <br />
           Get a real booking page in 5 minutes.
         </h1>
@@ -56,21 +55,16 @@ export function LandingHero() {
           <CTAPrimaryButton>{MARKETING_CTA_HERO}</CTAPrimaryButton>
           <Link
             href={LANDING_LIVE_DEMO_PATH}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background/80 px-6 py-3.5 text-sm font-medium text-foreground shadow-xs backdrop-blur-xs transition-[transform,background-color,border-color] duration-150 hover:bg-muted/60 active:scale-[0.96]"
+            className="inline-flex items-center gap-1.5 px-2 py-3.5 text-sm font-medium text-foreground/80 transition-colors duration-150 hover:text-foreground"
           >
-            <Icon name="box-arrow-up-right" className="text-base" />
             Try a live booking page
+            <Icon name="box-arrow-up-right" className="text-sm" />
           </Link>
         </div>
 
-        <ul className="landing-reveal landing-reveal-delay-4 mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-          {trustSignals.map((signal) => (
-            <li key={signal} className="inline-flex items-center gap-1.5">
-              <Icon name="check" className="text-xs text-primary" />
-              {signal}
-            </li>
-          ))}
-        </ul>
+        <p className="landing-reveal landing-reveal-delay-4 mt-6 text-sm text-muted-foreground">
+          {trustSignals.join(" · ")}
+        </p>
       </div>
 
       <div id="demo" className="landing-reveal landing-reveal-delay-5">
