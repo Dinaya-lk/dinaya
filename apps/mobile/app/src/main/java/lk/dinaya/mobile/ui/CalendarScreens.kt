@@ -45,7 +45,7 @@ internal fun CalendarViewToggle(view: String, onChange: (String) -> Unit) {
     Row(
         modifier = Modifier
             .clip(DinayaRadiusPill)
-            .dinayaGlass(DinayaRadiusPill, dinayaIsDark(MaterialTheme.colorScheme), reduceMotion)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(3.dp),
     ) {
         listOf("day" to "Day", "week" to "Week").forEach { (vKey, vLabel) ->

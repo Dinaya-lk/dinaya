@@ -28,9 +28,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -142,6 +140,7 @@ import lk.dinaya.mobile.data.ModuleItem
 import lk.dinaya.mobile.data.ModuleMetric
 import lk.dinaya.mobile.data.StoredSession
 import lk.dinaya.mobile.data.ThemePreference
+import lk.dinaya.mobile.data.isFounderDemoEmail
 import lk.dinaya.mobile.data.showDeveloperSignInTools
 
 private data class BottomTab(val routeKey: String, val label: String, val icon: ImageVector)
@@ -509,7 +508,6 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        contentWindowInsets = WindowInsets.statusBars,
         bottomBar = {
             DinayaBottomBar(
                 activeKey = activeTabKey,
@@ -519,13 +517,12 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             )
         },
     ) { padding ->
-        // Content draws behind the floating glass tab bar so the chrome reads as liquid glass.
         PullToRefreshBox(
             isRefreshing = state.isLoading,
             onRefresh = viewModel::refreshSelectedSection,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = padding.calculateTopPadding())
+                .padding(padding)
                 .background(MaterialTheme.colorScheme.surfaceContainerLow),
         ) {
         Column(
@@ -770,7 +767,7 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(96.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
         }
     }
@@ -780,10 +777,8 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
             onDismissRequest = { moreOpen = false },
             sheetState = sheetState,
             shape = DinayaRadiusSheet,
-            containerColor = dinayaSheetContainerColor(dark),
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            scrimColor = dinayaSheetScrimColor(dark),
-            tonalElevation = 0.dp,
         ) {
             MoreSheetContent(
                 activeKey = selectedSection.key,
@@ -791,10 +786,12 @@ internal fun DashboardScaffold(state: DinayaUiState, viewModel: DinayaViewModel)
                 plan = state.bootstrap?.business?.plan.orEmpty(),
                 businessSlug = state.bootstrap?.business?.slug ?: "",
                 themePreference = state.themePreference,
+                demoBusy = state.catalogBusy,
                 onSelect = { key ->
                     moreOpen = false
                     viewModel.selectSection(key)
                 },
+                onLoadDemo = viewModel::seedFounderDemo,
                 onSetTheme = viewModel::setThemePreference,
                 onHelp = {
                     moreOpen = false
@@ -879,11 +876,6 @@ internal fun DashboardTopChrome(
     onToggleTheme: () -> Unit,
     onSearchChange: (String) -> Unit,
 ) {
-    val dark = when (themePreference) {
-        ThemePreference.SYSTEM -> isSystemInDarkTheme()
-        ThemePreference.LIGHT -> false
-        ThemePreference.DARK -> true
-    }
     val reduceMotion = LocalReduceMotion.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -900,7 +892,8 @@ internal fun DashboardTopChrome(
                     onClick = onToggleTheme,
                     modifier = Modifier
                         .size(44.dp)
-                        .dinayaGlass(CircleShape, dark, reduceMotion),
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     AnimatedContent(
                         targetState = themePreference,
@@ -923,7 +916,8 @@ internal fun DashboardTopChrome(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .dinayaGlass(CircleShape, dark, reduceMotion),
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -967,10 +961,10 @@ internal fun DashboardTopChrome(
             singleLine = true,
             shape = DinayaRadiusPill,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
-                unfocusedBorderColor = Color.Transparent,
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                 cursorColor = MaterialTheme.colorScheme.primary,
             ),
             textStyle = DinayaFieldTextStyle.copy(
@@ -978,8 +972,7 @@ internal fun DashboardTopChrome(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
-                .dinayaGlass(DinayaRadiusPill, dark, reduceMotion),
+                .height(52.dp),
         )
     }
 }
@@ -1653,10 +1646,8 @@ internal fun BookingDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dark),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dark),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -1878,10 +1869,8 @@ internal fun ClientDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dark),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dark),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -2312,6 +2301,86 @@ internal fun OverviewStatsGrid(stats: List<lk.dinaya.mobile.data.OverviewStat>) 
     }
 }
 
+// ——— Founder feature lab ——————————————————————————————————————————————————
+@Composable
+internal fun FounderFeatureLab(
+    demoBusy: Boolean,
+    onLoadDemo: () -> Unit,
+    onOpenSection: (String) -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+        shape = DinayaRadiusCard,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier.semantics { contentDescription = "Founder feature lab" },
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "Feature lab",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Load sample salon data, then open every screen. Demo rows are named “Demo · …”.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Button(
+                onClick = onLoadDemo,
+                enabled = !demoBusy,
+                shape = DinayaRadiusButton,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+            ) {
+                Text(if (demoBusy) "Loading demo data…" else "Load demo data")
+            }
+            Text(
+                text = "OPEN A SCREEN",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            mobileDashboardSections.forEach { section ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 44.dp)
+                        .bounceClick { onOpenSection(section.key) }
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = section.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = section.summary,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Filled.ChevronRight,
+                        contentDescription = "Open ${section.label}",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
 // ——— More Sheet Content ———————————————————————————————————————————————————
 @Composable
 internal fun MoreSheetContent(
@@ -2320,7 +2389,9 @@ internal fun MoreSheetContent(
     plan: String,
     businessSlug: String,
     themePreference: ThemePreference,
+    demoBusy: Boolean = false,
     onSelect: (String) -> Unit,
+    onLoadDemo: () -> Unit = {},
     onSetTheme: (ThemePreference) -> Unit,
     onHelp: () -> Unit,
     onOpenWeb: (String) -> Unit,
@@ -2354,6 +2425,14 @@ internal fun MoreSheetContent(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.semantics { contentDescription = "More workspace sections" },
         )
+
+        if (isFounderDemoEmail(userEmail)) {
+            FounderFeatureLab(
+                demoBusy = demoBusy,
+                onLoadDemo = onLoadDemo,
+                onOpenSection = onSelect,
+            )
+        }
 
         MobileDashboardGroup.entries.forEach { group ->
             val items = mobileDashboardSections.filter { it.group == group && sectionKeyForMore(it.key) }
@@ -2720,17 +2799,14 @@ internal fun DinayaBottomBar(
     onOpenMore: () -> Unit,
 ) {
     val dark = dinayaIsDark(MaterialTheme.colorScheme)
-    val reduceMotion = LocalReduceMotion.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .dinayaGlass(DinayaRadiusChrome, dark, reduceMotion),
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

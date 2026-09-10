@@ -239,17 +239,16 @@ describe("Android merchant shell vs web dashboard", () => {
     expect(appKt).toContain("Export CSV");
   });
 
-  it("uses capsule buttons, rounded chrome, and glass only on navigation", () => {
+  it("uses capsule buttons, rounded chrome, and solid navigation", () => {
     const glassKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/ui/DinayaGlass.kt");
     expect(themeKt).toContain("val DinayaRadiusButton = RoundedCornerShape(999.dp)");
     expect(themeKt).toContain("val DinayaRadiusField = RoundedCornerShape(20.dp)");
     expect(themeKt).toContain("val DinayaRadiusCard = RoundedCornerShape(24.dp)");
     expect(themeKt).toContain("val DinayaRadiusChrome = RoundedCornerShape(32.dp)");
     expect(themeKt).toContain("shapes = DinayaShapes");
-    expect(glassKt).toContain("fun Modifier.dinayaGlass");
-    expect(glassKt).toContain("Do not use on content cards");
-    expect(appKt).toContain("dinayaGlass(DinayaRadiusChrome");
-    expect(appKt).toContain("dinayaGlass(DinayaRadiusPill, dark)");
+    expect(glassKt).toContain("fun dinayaIsDark");
+    expect(glassKt).not.toContain("fun Modifier.dinayaGlass");
+    expect(appKt).not.toContain("dinayaGlass(");
     expect(appKt).not.toContain("RoundedCornerShape(8.dp)");
     expect(appKt).not.toContain("RoundedCornerShape(12.dp)");
     expect(appKt).not.toContain("RoundedCornerShape(14.dp)");
@@ -262,7 +261,17 @@ describe("Android merchant shell vs web dashboard", () => {
     expect(themeKt).toContain("LocalReduceMotion");
     expect(motionKt).toContain("0.96f");
     expect(motionKt).toContain("DampingRatioNoBouncy");
-    expect(appKt).toContain("dinayaSectionEnter");
+    expect(appKt).toContain("dinayaSectionTransition");
     expect(appKt).toContain("BookingListSkeleton");
+  });
+
+  it("exposes a founder feature lab and demo seed for suvenseoras@gmail.com", () => {
+    const envKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/data/DeviceEnvironment.kt");
+    expect(envKt).toContain("suvenseoras@gmail.com");
+    expect(envKt).toContain("fun isFounderDemoEmail");
+    expect(appKt).toContain("Feature lab");
+    expect(appKt).toContain("Load demo data");
+    expect(viewModelKt).toContain("fun seedFounderDemo");
+    expect(clientKt).toContain("demo/seed");
   });
 });

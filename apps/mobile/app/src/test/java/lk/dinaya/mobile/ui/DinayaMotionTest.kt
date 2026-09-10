@@ -37,21 +37,3 @@ class DinayaMotionTest {
         assertEquals(0.95f, dinayaPressScaleTarget(pressed = true, reduceMotion = false, scaleDown = 0.9f), 0.001f)
     }
 }
-
-class DinayaGlassTest {
-    @Test
-    fun glassFillStaysTranslucent() {
-        assertTrue(dinayaGlassFill(dark = false).alpha < 1f)
-        assertTrue(dinayaGlassFill(dark = true).alpha < 1f)
-        assertTrue(dinayaSheetContainerColor(dark = false).alpha < 1f)
-        assertTrue(dinayaSheetContainerColor(dark = true).alpha < 1f)
-    }
-
-    @Test
-    fun sheetScrimIsVisibleButNotOpaque() {
-        val light = dinayaSheetScrimColor(dark = false)
-        val dark = dinayaSheetScrimColor(dark = true)
-        assertTrue(light.alpha > 0.2f && light.alpha < 0.6f)
-        assertTrue(dark.alpha > 0.3f && dark.alpha < 0.7f)
-    }
-}

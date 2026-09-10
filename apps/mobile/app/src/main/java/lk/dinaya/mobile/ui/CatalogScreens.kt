@@ -682,10 +682,8 @@ private fun CatalogClientDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -911,10 +909,8 @@ private fun CatalogClientSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
@@ -1126,10 +1122,8 @@ private fun CatalogServiceSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
@@ -1354,10 +1348,8 @@ private fun CatalogStaffSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
@@ -1568,10 +1560,8 @@ private fun CatalogLocationSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),

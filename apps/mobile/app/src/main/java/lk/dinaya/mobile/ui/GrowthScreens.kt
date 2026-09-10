@@ -254,10 +254,8 @@ internal fun ReviewsScreen(
             onDismissRequest = { replyTarget = null },
             sheetState = sheetState,
             shape = DinayaRadiusSheet,
-            containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-            tonalElevation = 0.dp,
         ) {
             Column(
                 modifier = Modifier
@@ -595,10 +593,8 @@ internal fun PaymentsScreen(
             onDismissRequest = { selected = null },
             sheetState = sheetState,
             shape = DinayaRadiusSheet,
-            containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-            tonalElevation = 0.dp,
         ) {
             Column(
                 modifier = Modifier
@@ -1048,10 +1044,8 @@ private fun DealDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -1143,10 +1137,8 @@ private fun DealCreateSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -1460,10 +1452,8 @@ internal fun BroadcastsScreen(
             onDismissRequest = { detailTarget = null },
             sheetState = sheetState,
             shape = DinayaRadiusSheet,
-            containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-            tonalElevation = 0.dp,
         ) {
             Column(
                 modifier = Modifier
@@ -1568,10 +1558,8 @@ private fun BroadcastCreateSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -1814,10 +1802,8 @@ internal fun AiHubScreen(
             onDismissRequest = { detailTarget = null },
             sheetState = sheetState,
             shape = DinayaRadiusSheet,
-            containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+            containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-            tonalElevation = 0.dp,
         ) {
             Column(
                 modifier = Modifier

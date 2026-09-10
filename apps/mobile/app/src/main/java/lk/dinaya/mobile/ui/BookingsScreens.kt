@@ -136,10 +136,8 @@ internal fun NewBookingSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -459,10 +457,8 @@ internal fun RescheduleBookingSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = DinayaRadiusSheet,
-        containerColor = dinayaSheetContainerColor(dinayaIsDark(MaterialTheme.colorScheme)),
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        scrimColor = dinayaSheetScrimColor(dinayaIsDark(MaterialTheme.colorScheme)),
-        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
