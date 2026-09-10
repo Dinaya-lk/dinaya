@@ -3,6 +3,7 @@ package lk.dinaya.mobile.ui
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -118,14 +119,24 @@ val DinayaDarkColors = darkColorScheme(
 )
 
 // ——— Shape ————————————————————————————————————————————————————————————————
-// Site radius: --radius 0.5rem (8dp). Buttons rounded-lg, cards rounded-2xl (16dp),
-// sections rounded-3xl (24dp), auth inputs/buttons rounded-full (pill),
-// bottom-sheet rounded-t-[1.25rem] (20dp).
-val DinayaRadiusButton = RoundedCornerShape(8.dp)
-val DinayaRadiusCard = RoundedCornerShape(16.dp)
-val DinayaRadiusSection = RoundedCornerShape(24.dp)
+// Apple-concentric radii on Android. Capsule controls; continuous cards;
+// independent field radius so tall text areas are not stadiums.
+// Chrome (tab bar) is a separate floating layer — never glass-on-glass on cards.
+val DinayaRadiusButton = RoundedCornerShape(999.dp)
+val DinayaRadiusField = RoundedCornerShape(20.dp)
+val DinayaRadiusCard = RoundedCornerShape(24.dp)
+val DinayaRadiusSection = RoundedCornerShape(28.dp)
+val DinayaRadiusChrome = RoundedCornerShape(32.dp)
 val DinayaRadiusPill = RoundedCornerShape(999.dp)
-val DinayaRadiusSheet = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+val DinayaRadiusSheet = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+
+val DinayaShapes = Shapes(
+    extraSmall = RoundedCornerShape(16.dp),
+    small = DinayaRadiusField,
+    medium = DinayaRadiusCard,
+    large = DinayaRadiusSection,
+    extraLarge = DinayaRadiusChrome,
+)
 
 // ——— Type —————————————————————————————————————————————————————————————————
 // Same pairing as dinaya.lk: Cal Sans (`font-cal`) for display / headings /
@@ -260,6 +271,7 @@ fun DinayaTheme(
         MaterialTheme(
             colorScheme = if (isDark) DinayaDarkColors else DinayaLightColors,
             typography = DinayaTypography,
+            shapes = DinayaShapes,
             content = content,
         )
     }

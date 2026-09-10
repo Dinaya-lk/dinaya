@@ -472,7 +472,7 @@ internal fun SettingsScreen(
                     onValueChange = { name = it },
                     label = { Text("Business name") },
                     singleLine = true,
-                    shape = DinayaRadiusButton,
+                    shape = DinayaRadiusField,
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Business name input" },
                 )
@@ -481,7 +481,7 @@ internal fun SettingsScreen(
                     onValueChange = { phone = it },
                     label = { Text("Phone") },
                     singleLine = true,
-                    shape = DinayaRadiusButton,
+                    shape = DinayaRadiusField,
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Business phone input" },
                 )
@@ -489,7 +489,7 @@ internal fun SettingsScreen(
                     value = address,
                     onValueChange = { address = it },
                     label = { Text("Address") },
-                    shape = DinayaRadiusButton,
+                    shape = DinayaRadiusField,
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Business address input" },
                 )
@@ -506,7 +506,7 @@ internal fun SettingsScreen(
                     },
                     minLines = 3,
                     maxLines = 6,
-                    shape = DinayaRadiusButton,
+                    shape = DinayaRadiusField,
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Cancellation policy input" },
                 )
@@ -523,7 +523,7 @@ internal fun SettingsScreen(
                     },
                     minLines = 3,
                     maxLines = 6,
-                    shape = DinayaRadiusButton,
+                    shape = DinayaRadiusField,
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Deposit policy input" },
                 )

@@ -298,7 +298,7 @@ internal fun ReviewsScreen(
                     },
                     minLines = 3,
                     maxLines = 6,
-                    shape = DinayaRadiusCard,
+                    shape = DinayaRadiusField,
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1485,7 +1485,7 @@ internal fun BroadcastsScreen(
                     onValueChange = { phone = it },
                     label = { Text("Test phone (e.g. 0771234567)") },
                     singleLine = true,
-                    shape = DinayaRadiusButton,
+                    shape = DinayaRadiusField,
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Test send phone input" },
                 )
@@ -1611,7 +1611,7 @@ private fun BroadcastCreateSheet(
                     },
                     minLines = 4,
                     maxLines = 8,
-                    shape = DinayaRadiusCard,
+                    shape = DinayaRadiusField,
                     textStyle = DinayaFieldTextStyle.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier
                         .fillMaxWidth()

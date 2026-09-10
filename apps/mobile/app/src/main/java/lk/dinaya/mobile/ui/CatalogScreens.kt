@@ -113,7 +113,7 @@ internal fun CatalogErrorBanner(message: String?, onDismiss: (() -> Unit)? = nul
             )
             if (onDismiss != null) {
                 Spacer(modifier = Modifier.width(6.dp))
-                IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                IconButton(onClick = onDismiss, modifier = Modifier.size(44.dp)) {
                     Icon(
                         imageVector = Icons.Filled.Close,
                         contentDescription = "Dismiss",
@@ -439,7 +439,7 @@ internal fun CatalogField(
             },
             singleLine = singleLine,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            shape = DinayaRadiusButton,
+            shape = DinayaRadiusField,
             isError = supportingError != null,
             supportingText = supportingError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
             colors = OutlinedTextFieldDefaults.colors(
@@ -643,7 +643,7 @@ private fun CatalogClientRow(item: ModuleItem, onClick: () -> Unit) {
             }
             val phone = item.subtitle?.split("·", ",", "—")?.firstOrNull()?.trim().orEmpty()
             if (phone.any { it.isDigit() }) {
-                IconButton(onClick = { catalogDial(context, phone) }, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = { catalogDial(context, phone) }, modifier = Modifier.size(44.dp)) {
                     Icon(
                         imageVector = Icons.Filled.Phone,
                         contentDescription = "Call",
@@ -858,7 +858,7 @@ private fun CatalogClientDetailSheet(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     },
-                    shape = DinayaRadiusButton,
+                    shape = DinayaRadiusField,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline,
@@ -1538,7 +1538,7 @@ private fun CatalogLocationRow(item: ModuleItem, onEdit: () -> Unit) {
                     Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onEdit, modifier = Modifier.size(44.dp)) {
                 Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
         }
@@ -1757,7 +1757,7 @@ internal fun AvailabilityScreen(
                                                                     .filterNot { it.id == window.id }
                                                                 viewModel.setAvailabilityEdits(member.staffId, next)
                                                             },
-                                                            modifier = Modifier.size(28.dp),
+                                                            modifier = Modifier.size(44.dp),
                                                         ) {
                                                             Icon(imageVector = Icons.Filled.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                                                         }
@@ -1867,7 +1867,7 @@ internal fun AvailabilityScreen(
                                 if (override.id.isNotBlank()) {
                                     IconButton(
                                         onClick = { viewModel.deleteAvailabilityOverride(override.id, member.staffId) },
-                                        modifier = Modifier.size(32.dp),
+                                        modifier = Modifier.size(44.dp),
                                     ) {
                                         Icon(imageVector = Icons.Filled.Delete, contentDescription = "Remove override", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                     }

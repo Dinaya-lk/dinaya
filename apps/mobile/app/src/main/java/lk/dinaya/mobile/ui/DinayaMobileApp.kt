@@ -233,7 +233,7 @@ internal fun LoginScreen(state: DinayaUiState, viewModel: DinayaViewModel) {
                         containerColor = if (dark) Color(0xFF1E293B) else Color(0xFFEFF6FF),
                     ),
                     border = BorderStroke(1.dp, if (dark) Color(0xFF334155) else Color(0xFFBFDBFE)),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = DinayaRadiusCard,
                     modifier = Modifier
                         .fillMaxWidth()
                         .bounceClick {
@@ -867,6 +867,11 @@ internal fun DashboardTopChrome(
     onToggleTheme: () -> Unit,
     onSearchChange: (String) -> Unit,
 ) {
+    val dark = when (themePreference) {
+        ThemePreference.SYSTEM -> isSystemInDarkTheme()
+        ThemePreference.LIGHT -> false
+        ThemePreference.DARK -> true
+    }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -881,9 +886,8 @@ internal fun DashboardTopChrome(
                 IconButton(
                     onClick = onToggleTheme,
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .size(44.dp)
+                        .dinayaGlass(CircleShape, dark),
                 ) {
                     Icon(
                         imageVector = when (themePreference) {
@@ -893,15 +897,14 @@ internal fun DashboardTopChrome(
                         },
                         contentDescription = "Toggle theme",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(19.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
 
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .size(44.dp)
+                        .dinayaGlass(CircleShape, dark),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -943,12 +946,12 @@ internal fun DashboardTopChrome(
                 }
             },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = DinayaRadiusPill,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
                 cursorColor = MaterialTheme.colorScheme.primary,
             ),
             textStyle = DinayaFieldTextStyle.copy(
@@ -956,7 +959,8 @@ internal fun DashboardTopChrome(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .height(52.dp)
+                .dinayaGlass(DinayaRadiusPill, dark),
         )
     }
 }
@@ -2637,6 +2641,7 @@ internal fun MoreSheetContent(
 internal fun SignOutDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = DinayaRadiusSection,
         title = { Text("Sign out?", style = MaterialTheme.typography.titleLarge) },
         text = { Text("You'll need to sign in again to manage bookings on this device.", style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
@@ -2684,14 +2689,19 @@ internal fun DinayaBottomBar(
     onSelect: (String) -> Unit,
     onOpenMore: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.8f)),
+    val dark = dinayaIsDark(MaterialTheme.colorScheme)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .dinayaGlass(DinayaRadiusChrome, dark),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding(),
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             BottomPrimary.forEach { tab ->
                 val active = tab.routeKey == activeKey
@@ -2699,6 +2709,7 @@ internal fun DinayaBottomBar(
                     label = tab.label,
                     icon = tab.icon,
                     active = active,
+                    dark = dark,
                     onClick = { onSelect(tab.routeKey) },
                     modifier = Modifier.weight(1f),
                 )
@@ -2708,6 +2719,7 @@ internal fun DinayaBottomBar(
                 label = "More",
                 icon = Icons.Filled.MoreHoriz,
                 active = moreSelected,
+                dark = dark,
                 onClick = onOpenMore,
                 modifier = Modifier.weight(1f),
             )
@@ -2720,12 +2732,13 @@ internal fun BottomTabCell(
     label: String,
     icon: ImageVector,
     active: Boolean,
+    dark: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val haptic = LocalHapticFeedback.current
-    val content = if (active) MaterialTheme.colorScheme.primary
-    else MaterialTheme.colorScheme.onSurfaceVariant
+    val scheme = MaterialTheme.colorScheme
+    val content = if (active) scheme.primary else scheme.onSurfaceVariant
     val reduceMotion = LocalReduceMotion.current
     val iconScale by animateFloatAsState(
         targetValue = if (active && !reduceMotion) 1.08f else 1.0f,
@@ -2735,7 +2748,7 @@ internal fun BottomTabCell(
 
     Column(
         modifier = modifier
-            .heightIn(min = 48.dp)
+            .heightIn(min = 56.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -2743,28 +2756,34 @@ internal fun BottomTabCell(
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 onClick()
             }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Box(
-            modifier = Modifier
-                .width(32.dp)
-                .height(2.dp)
-                .clip(CircleShape)
-                .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent),
-        )
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = content,
-            modifier = Modifier
-                .size(22.dp)
-                .graphicsLayer {
-                    scaleX = iconScale
-                    scaleY = iconScale
-                },
-        )
+            modifier = Modifier.size(44.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (active) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(CircleShape)
+                        .background(scheme.primary.copy(alpha = if (dark) 0.22f else 0.14f)),
+                )
+            }
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = content,
+                modifier = Modifier
+                    .size(22.dp)
+                    .graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                    },
+            )
+        }
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
@@ -3160,7 +3179,7 @@ internal fun SiteEmptyState(title: String, body: String) {
             .fillMaxWidth()
             .dashedBorder(
                 color = MaterialTheme.colorScheme.outline,
-                shapeRadius = 16.dp,
+                shapeRadius = 24.dp,
             )
             .background(MaterialTheme.colorScheme.surface, DinayaRadiusCard)
             .padding(horizontal = 24.dp, vertical = 36.dp),
@@ -3235,7 +3254,7 @@ internal fun ErrorBanner(
                 Spacer(modifier = Modifier.width(6.dp))
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(44.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
@@ -3290,7 +3309,7 @@ internal fun ActionBanner(
                 Spacer(modifier = Modifier.width(6.dp))
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(44.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
@@ -3311,7 +3330,7 @@ internal fun AuthField(
     label: String,
     keyboardType: KeyboardType = KeyboardType.Text,
     isPassword: Boolean = false,
-    shape: RoundedCornerShape = RoundedCornerShape(12.dp),
+    shape: RoundedCornerShape = DinayaRadiusPill,
     labelAccessory: (@Composable () -> Unit)? = null,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
@@ -3439,6 +3458,7 @@ internal fun BookingConfirmStatusDialog(
     val isCancel = status.lowercase() == "cancelled"
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = DinayaRadiusSection,
         title = {
             Text(
                 text = if (isCancel) "Cancel this booking?" else "Mark as no-show?",
@@ -3467,7 +3487,7 @@ internal fun BookingConfirmStatusDialog(
                             )
                         },
                         singleLine = true,
-                        shape = DinayaRadiusButton,
+                        shape = DinayaRadiusField,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline,

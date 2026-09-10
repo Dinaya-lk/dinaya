@@ -239,6 +239,22 @@ describe("Android merchant shell vs web dashboard", () => {
     expect(appKt).toContain("Export CSV");
   });
 
+  it("uses capsule buttons, rounded chrome, and glass only on navigation", () => {
+    const glassKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/ui/DinayaGlass.kt");
+    expect(themeKt).toContain("val DinayaRadiusButton = RoundedCornerShape(999.dp)");
+    expect(themeKt).toContain("val DinayaRadiusField = RoundedCornerShape(20.dp)");
+    expect(themeKt).toContain("val DinayaRadiusCard = RoundedCornerShape(24.dp)");
+    expect(themeKt).toContain("val DinayaRadiusChrome = RoundedCornerShape(32.dp)");
+    expect(themeKt).toContain("shapes = DinayaShapes");
+    expect(glassKt).toContain("fun Modifier.dinayaGlass");
+    expect(glassKt).toContain("Do not use on content cards");
+    expect(appKt).toContain("dinayaGlass(DinayaRadiusChrome");
+    expect(appKt).toContain("dinayaGlass(DinayaRadiusPill, dark)");
+    expect(appKt).not.toContain("RoundedCornerShape(8.dp)");
+    expect(appKt).not.toContain("RoundedCornerShape(12.dp)");
+    expect(appKt).not.toContain("RoundedCornerShape(14.dp)");
+  });
+
   it("uses keep-alive, no-bounce springs, press scale, and reduced motion", () => {
     const motionKt = readWorkspace("apps/mobile/app/src/main/java/lk/dinaya/mobile/ui/DinayaMotion.kt");
     expect(clientKt).toContain("keep-alive");
