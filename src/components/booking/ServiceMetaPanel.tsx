@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StepLocation from "./StepLocation";
 import { computeDiscountedPrice } from "@/lib/deals/pricing";
 import { BusinessRating, getBusinessRating } from "./BusinessRating";
-import { BookingPolicyAccordion } from "./BookingPolicyAccordion";
 import { BookingServicePrice } from "./BookingServicePrice";
 import { cn } from "@/lib/utils";
 
@@ -267,17 +266,6 @@ export function ServiceMetaPanel({
                   {formatLkr(Math.ceil((price * service.depositPercent) / 100))}
                 </span>
               </p>
-            ) : null}
-            {business.cancellationPolicy || business.depositPolicy || business.bankTransferInstructions ? (
-              <div className="mt-4 -mx-1">
-                <BookingPolicyAccordion
-                  copy={copy}
-                  cancellationPolicy={business.cancellationPolicy}
-                  depositPolicy={business.depositPolicy}
-                  bankTransferInstructions={business.bankTransferInstructions}
-                  variant="embedded"
-                />
-              </div>
             ) : null}
           </div>
         ) : null}
