@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "motion/react";
+import { useState, useRef } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Icon } from "@/components/ui/Icon";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import Link from "next/link";
 import { LANDING_LIVE_DEMO_PATH } from "@/lib/landing-demo";
@@ -19,22 +21,56 @@ function Pill({ icon, children }: { icon: string; children: React.ReactNode }) {
 
 // ─── Feature 1: points to live demo (no duplicate booking UI) ───────────────
 function BookingFeatureIllustration() {
+  const reduceMotion = useReducedMotion();
+  const [confirmed, setConfirmed] = useState(!!reduceMotion);
+  const playedRef = useRef(false);
+
+  const play = () => {
+    if (playedRef.current || reduceMotion) return;
+    playedRef.current = true;
+    window.setTimeout(() => setConfirmed(true), 900);
+  };
+
   return (
-    <div className="flex w-full max-w-xs flex-col items-center gap-4 px-4 py-2 text-center mx-auto">
-      <div className="flex size-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+    <motion.div
+      onViewportEnter={play}
+      viewport={{ once: true, margin: "-40px" }}
+      className="flex w-full max-w-xs flex-col items-center gap-4 px-4 py-2 text-center mx-auto"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="relative flex size-16 items-center justify-center rounded-2xl border border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+      >
         <Icon name="calendar-check" className="text-3xl" />
-      </div>
+        <AnimatePresence>
+          {confirmed && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 22 }}
+              className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-green-600 text-white ring-2 ring-white dark:ring-neutral-900"
+            >
+              <Icon name="check-lg" className="text-[10px]" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
       <p className="text-sm leading-relaxed text-muted-foreground text-pretty">
         Your clients book on a page like the live demo above — calendar, slots, and payment in one flow.
       </p>
       <Link
         href={LANDING_LIVE_DEMO_PATH}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
+        className="group inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
       >
         Try live booking page
-        <Icon name="box-arrow-up-right" className="text-xs" />
+        <Icon
+          name="box-arrow-up-right"
+          className="text-xs transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+        />
       </Link>
-    </div>
+    </motion.div>
   );
 }
 
@@ -42,61 +78,104 @@ function BookingFeatureIllustration() {
 function PaymentMockup() {
   const reduceMotion = useReducedMotion();
   const [phase, setPhase] = useState(reduceMotion ? 2 : 0);
+  const playedRef = useRef(false);
 
-  useEffect(() => {
-    if (reduceMotion) {
-      setPhase(2);
-      return;
-    }
-    const id = window.setInterval(() => {
-      setPhase((p) => (p + 1) % 3);
-    }, 1600);
-    return () => window.clearInterval(id);
-  }, [reduceMotion]);
+  const play = () => {
+    if (playedRef.current || reduceMotion) return;
+    playedRef.current = true;
+    window.setTimeout(() => setPhase(1), 900);
+    window.setTimeout(() => setPhase(2), 2000);
+  };
 
   const isPaid = phase >= 1;
   const notified = phase === 2;
 
   return (
-    <div className="w-full max-w-xs mx-auto space-y-2.5">
-      <div className="rounded-2xl border border-white/70 bg-white/80 dark:border-neutral-700/70 dark:bg-neutral-900/80 shadow-lg shadow-green-500/10 overflow-hidden" style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+    <motion.div
+      onViewportEnter={play}
+      viewport={{ once: true, margin: "-40px" }}
+      className="w-full max-w-xs mx-auto space-y-2.5"
+    >
+      <div className="rounded-2xl border border-white/70 bg-white/80 dark:border-neutral-700/70 dark:bg-neutral-900/80 shadow-lg overflow-hidden" style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
         <motion.div
-          animate={{
-            background: isPaid
-              ? "linear-gradient(90deg, rgb(34 197 94), rgb(16 185 129))"
-              : "linear-gradient(90deg, rgb(245 158 11), rgb(249 115 22))",
-          }}
-          transition={{ duration: 0.35 }}
+          animate={{ backgroundColor: isPaid ? "rgb(22 163 74)" : "rgb(120 113 108)" }}
+          transition={{ type: "spring", bounce: 0, duration: 0.4 }}
           className="px-4 py-3 flex items-center gap-2.5"
         >
-          <div className="flex size-7 items-center justify-center rounded-full bg-white/20">
+          <motion.div
+            key={isPaid ? "paid-icon" : "pending-icon"}
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", bounce: 0.35, duration: 0.4 }}
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/20"
+          >
             <Icon name={isPaid ? "check-circle" : "clock-history"} className="text-white text-sm" />
+          </motion.div>
+          <div className="min-w-0 flex-1">
+            <AnimatePresence initial={false} mode="popLayout">
+              <motion.div
+                key={isPaid ? "paid-label" : "pending-label"}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                className="truncate text-white font-semibold text-xs"
+              >
+                {isPaid ? "Deposit received" : "Waiting for payment"}
+              </motion.div>
+            </AnimatePresence>
+            <div className="truncate text-white/80 text-[11px]">PayHere · •••• 4242</div>
           </div>
-          <div className="flex-1">
-            <div className="text-white font-semibold text-xs">{isPaid ? "Deposit received" : "Waiting for payment"}</div>
-            <div className="text-white/80 text-[11px]">Via PayHere · Visa ••••4242</div>
+          <div className="shrink-0 text-white font-bold text-sm tabular-nums">
+            <AnimatePresence initial={false} mode="popLayout">
+              {isPaid ? (
+                <motion.span
+                  key="paid-amount"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                  className="block"
+                >
+                  Rs. 1,250
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="pending-amount"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                  className="block"
+                >
+                  Pending
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
-          <div className="text-white font-bold text-sm">{isPaid ? "Rs. 1,250" : "Pending"}</div>
         </motion.div>
         <div className="px-4 py-3 space-y-1.5">
           {[
             { label: "Client", value: "Kavya Senanayake" },
             { label: "Service", value: "Haircut & Style" },
             { label: "Appointment", value: "Thu 22 May · 10:30 AM" },
-            { label: "Balance on arrival", value: "Rs. 1,250" },
           ].map((r) => (
             <div key={r.label} className="flex justify-between text-xs">
               <span className="text-muted-foreground">{r.label}</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">
-                {r.label === "Balance on arrival" && !isPaid ? "Rs. 2,500" : r.value}
-              </span>
+              <span className="font-medium tabular-nums text-gray-900 dark:text-gray-100">{r.value}</span>
             </div>
           ))}
+          <div className="flex justify-between text-xs">
+            <span className="text-muted-foreground">Balance on arrival</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100">
+              Rs. <NumberTicker value={isPaid ? 1250 : 2500} className="text-gray-900 dark:text-gray-100" />
+            </span>
+          </div>
         </div>
       </div>
       <motion.div
         animate={notified ? { opacity: 1, y: 0 } : { opacity: 0.45, y: 4 }}
-        transition={{ duration: 0.25 }}
+        transition={{ type: "spring", bounce: 0, duration: 0.3 }}
         className="flex items-center gap-2 rounded-full border border-white/60 bg-white/80 dark:border-neutral-700/60 dark:bg-neutral-900/80 px-3 py-2 shadow-xs w-fit mx-auto"
         style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}
       >
@@ -107,7 +186,7 @@ function PaymentMockup() {
           {notified ? "Owner notified instantly" : "Sending owner notification..."}
         </span>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -120,23 +199,22 @@ function RemindersMockup() {
     { name: "Amali K.", time: "3:30 PM", service: "Eyebrow Threading" },
   ];
   const [step, setStep] = useState(reduceMotion ? reminders.length + 1 : 0);
+  const playedRef = useRef(false);
 
-  useEffect(() => {
-    if (reduceMotion) {
-      setStep(reminders.length + 1);
-      return;
-    }
-    const id = window.setInterval(() => {
-      setStep((s) => (s + 1) % (reminders.length + 2));
-    }, 1450);
-    return () => window.clearInterval(id);
-  }, [reduceMotion, reminders.length]);
+  const play = () => {
+    if (playedRef.current || reduceMotion) return;
+    playedRef.current = true;
+    reminders.forEach((_, i) => {
+      window.setTimeout(() => setStep(i + 1), 500 + i * 650);
+    });
+    window.setTimeout(() => setStep(reminders.length + 1), 500 + reminders.length * 650 + 350);
+  };
 
   const sendingIndex = step < reminders.length ? step : -1;
   const sentCount = Math.min(step, reminders.length);
 
   return (
-    <div className="w-full max-w-xs mx-auto space-y-2">
+    <motion.div onViewportEnter={play} viewport={{ once: true, margin: "-40px" }} className="w-full max-w-xs mx-auto space-y-2">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
           <motion.div
@@ -162,15 +240,15 @@ function RemindersMockup() {
       {reminders.map((r, i) => {
         const isSent = i < sentCount;
         const isSending = i === sendingIndex;
-        const status = (() => {
-          if (isSending) return "Sending";
-          if (!isSent) return "Queued";
-          if (i === 0 && sentCount >= 2) return "Confirmed ✓";
-          return "Delivered";
+        const status: { label: string; icon?: string } = (() => {
+          if (isSending) return { label: "Sending" };
+          if (!isSent) return { label: "Queued" };
+          if (i === 0 && sentCount >= 2) return { label: "Confirmed", icon: "check-circle-fill" };
+          return { label: "Delivered" };
         })();
-        const statusTone = status === "Confirmed ✓"
+        const statusTone = status.label === "Confirmed"
           ? "text-green-600"
-          : status === "Delivered"
+          : status.label === "Delivered"
             ? "text-emerald-600"
             : isSending
               ? "text-primary"
@@ -195,9 +273,13 @@ function RemindersMockup() {
           <motion.div
             animate={isSending ? { scale: [1, 1.06, 1] } : { scale: 1 }}
             transition={{ duration: 0.9, repeat: isSending ? Number.POSITIVE_INFINITY : 0, ease: "easeInOut" }}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-950/50 text-[11px] font-bold text-violet-700 dark:text-violet-300"
+            className="shrink-0"
           >
-            {r.name[0]}{r.name.split(" ")[1]?.[0]}
+            <Avatar>
+              <AvatarFallback className="bg-violet-100 text-[11px] font-bold text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
+                {r.name[0]}{r.name.split(" ")[1]?.[0]}
+              </AvatarFallback>
+            </Avatar>
           </motion.div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
@@ -207,13 +289,14 @@ function RemindersMockup() {
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-muted-foreground truncate">{r.service}</span>
               <motion.span
-                key={`${r.name}-${status}`}
+                key={`${r.name}-${status.label}`}
                 initial={{ opacity: 0, y: 3 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
                 className={`text-[11px] font-medium ml-2 shrink-0 inline-flex items-center gap-0.5 ${statusTone} ${isSending ? "rounded-full bg-primary/10 px-1.5 py-0.5" : ""}`}
               >
-                {status}
+                {status.icon && <Icon name={status.icon} className="text-[9px]" />}
+                {status.label}
                 {isSending && (
                   <span className="inline-flex items-center gap-[2px] ml-px">
                     {[0, 1, 2].map((dot) => (
@@ -231,7 +314,7 @@ function RemindersMockup() {
           </div>
         </motion.div>
       );})}
-    </div>
+    </motion.div>
   );
 }
 
@@ -242,7 +325,7 @@ const features = [
     headlinePre: "Dinaya", verb: { icon: "calendar-check", label: "books" }, headlinePost: "clients while you sleep.",
     desc: "Your own page at yourname.dinaya.lk. Clients pick a time and pay — without a single WhatsApp message.",
     mockup: <BookingFeatureIllustration />,
-    mockupBg: "bg-blue-300/20",
+    mockupBg: "bg-amber-300/20",
   },
   {
     num: "02", tag: "PAYMENTS",
