@@ -42,6 +42,7 @@ describe("buildBookingBreadcrumbItems", () => {
   it("shows full staff trail on the contact step when multiple staff exist", () => {
     const items = buildBookingBreadcrumbItems({
       ...base,
+      lockServiceSelection: false,
       showContactForm: true,
       needsStaffPicker: true,
     });
@@ -71,6 +72,7 @@ describe("buildBookingBreadcrumbItems", () => {
   it("shows staff step crumbs when choosing a team member", () => {
     const items = buildBookingBreadcrumbItems({
       ...base,
+      lockServiceSelection: false,
       showContactForm: false,
       needsStaffPicker: true,
       showStaffStep: true,
@@ -86,6 +88,7 @@ describe("buildBookingBreadcrumbItems", () => {
   it("shows stylist step before date and time when staff is required", () => {
     const items = buildBookingBreadcrumbItems({
       ...base,
+      lockServiceSelection: false,
       showContactForm: false,
       needsStaffPicker: true,
       showStaffStep: false,

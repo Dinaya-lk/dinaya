@@ -8,10 +8,13 @@ const nextCli = require.resolve("next/dist/bin/next");
 
 function runStep(label, command, args) {
   console.log(`[build] ${label}...`);
+  // NOTE: shell:false so absolute paths containing spaces or `&` (e.g. a
+  // Windows checkout under "3 - Platforms & Apps") are passed verbatim.
+  // shell:true would split them and fail with "'C:\Program' is not recognized".
   const result = spawnSync(command, args, {
     env: process.env,
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: false,
   });
 
   if (result.status !== 0) {

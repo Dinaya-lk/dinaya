@@ -22,5 +22,8 @@ export default defineConfig([
     "public/**",
     // Sibling projects with their own toolchains
     "dinaya-uptime-monitor/**",
+    // Local scratchpads and temp repo copies — never linted
+    "scratch/**",
+    ".codex-temp/**",
   ]),
 ]);
