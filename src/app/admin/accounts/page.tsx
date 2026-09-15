@@ -5,16 +5,19 @@ import { ChevronRight, Search } from "lucide-react";
 import { db } from "@/db";
 import { bookings, businesses, subscriptions, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { ADMIN_PAGE_SIZE, adminPageOffset, parseAdminPage } from "@/lib/admin-pagination";
 import { likePattern } from "@/lib/like";
 import { planDisplayName, type Plan } from "@/lib/plan";
 import { formatLkr } from "@/lib/utils";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
   q?: string;
   plan?: "trial" | "starter" | "pro" | "max" | "expired" | "all";
+  page?: string;
 };
 
 export default async function AdminAccountsPage({
@@ -26,6 +29,7 @@ export default async function AdminAccountsPage({
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const planFilter = sp.plan && sp.plan !== "all" ? sp.plan : null;
+  const page = parseAdminPage(sp.page);
 
   const searchExpr = q
     ? or(
@@ -59,12 +63,13 @@ export default async function AdminAccountsPage({
     .where(whereExpr)
     .groupBy(businesses.id)
     .orderBy(desc(businesses.createdAt))
-    .limit(100),
+    .limit(ADMIN_PAGE_SIZE)
+    .offset(adminPageOffset(page)),
     [],
   );
 
   const [{ totalAccounts }] = await safeAdminQuery(
-    db.select({ totalAccounts: count() }).from(businesses),
+    db.select({ totalAccounts: count() }).from(businesses).where(whereExpr),
     [{ totalAccounts: 0 }] as { totalAccounts: number }[],
   );
 
@@ -83,7 +88,7 @@ export default async function AdminAccountsPage({
         <div>
           <h1 className="font-cal text-3xl tracking-tight">Accounts</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {Number(totalAccounts).toLocaleString()} total · showing {rows.length}
+            {Number(totalAccounts).toLocaleString()} matching · page {page}
           </p>
         </div>
       </div>
@@ -106,7 +111,6 @@ export default async function AdminAccountsPage({
           />
         </div>
         <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-1">
-          <input type="hidden" name="q" value={q} />
           {planChips.map((chip) => {
             const active = (sp.plan ?? "all") === chip.value;
             return (
@@ -225,6 +229,16 @@ export default async function AdminAccountsPage({
               })}
             </tbody>
           </table>
+        </div>
+        <div className="border-t dark:border-neutral-800">
+          <AdminPagination
+            basePath="/admin/accounts"
+            params={{ q: q || undefined, plan: sp.plan }}
+            page={page}
+            rowCount={rows.length}
+            total={Number(totalAccounts)}
+            pageSize={ADMIN_PAGE_SIZE}
+          />
         </div>
       </div>
     </div>

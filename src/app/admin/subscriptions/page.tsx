@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { desc, eq, sql } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { format } from "date-fns";
 import { CreditCard } from "lucide-react";
 import { db } from "@/db";
 import { businesses, subscriptions } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { ADMIN_PAGE_SIZE, adminPageOffset, parseAdminPage } from "@/lib/admin-pagination";
 import { formatLkr } from "@/lib/utils";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +22,11 @@ const STATUS_STYLES: Record<string, string> = {
 export default async function AdminSubscriptionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
   await requirePlatformAdmin();
   const sp = await searchParams;
+  const page = parseAdminPage(sp.page);
   const statusFilter =
     sp.status && ["active", "past_due", "cancelled", "ended"].includes(sp.status)
       ? (sp.status as "active" | "past_due" | "cancelled" | "ended")
@@ -47,9 +50,19 @@ export default async function AdminSubscriptionsPage({
     .innerJoin(businesses, eq(businesses.id, subscriptions.businessId))
     .where(statusFilter ? eq(subscriptions.status, statusFilter) : undefined)
     .orderBy(desc(subscriptions.createdAt))
-    .limit(200),
+    .limit(ADMIN_PAGE_SIZE)
+    .offset(adminPageOffset(page)),
     [],
   );
+
+  const filterCount = await safeAdminQuery(
+    db
+      .select({ filteredTotal: count() })
+      .from(subscriptions)
+      .where(statusFilter ? eq(subscriptions.status, statusFilter) : undefined),
+    [{ filteredTotal: 0 }] as { filteredTotal: number }[],
+  );
+  const filteredTotal = Number(filterCount[0]?.filteredTotal ?? 0);
 
   const summary = await safeAdminQuery(
     db
@@ -192,6 +205,16 @@ export default async function AdminSubscriptionsPage({
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="border-t dark:border-neutral-800">
+          <AdminPagination
+            basePath="/admin/subscriptions"
+            params={{ status: sp.status }}
+            page={page}
+            rowCount={rows.length}
+            total={filteredTotal}
+            pageSize={ADMIN_PAGE_SIZE}
+          />
         </div>
       </div>
     </div>
