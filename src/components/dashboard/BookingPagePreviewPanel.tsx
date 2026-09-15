@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BorderBeam } from "@/components/ui/border-beam";
 import IPhoneMockup from "@/components/ui/iphone-mockup";
 import { buttonVariants } from "@/components/ui/button";
 import { dashboardSectionClass } from "@/lib/dashboard-ui";
@@ -10,14 +9,14 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   previewSrc: string;
-  accentColor: string;
+  /** @deprecated No longer used for decoration; kept for caller compatibility. */
+  accentColor?: string;
   bookingUrl: string;
   className?: string;
 };
 
 export function BookingPagePreviewPanel({
   previewSrc,
-  accentColor,
   bookingUrl,
   className,
 }: Props) {
@@ -50,14 +49,7 @@ export function BookingPagePreviewPanel({
         </Link>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl border bg-muted/20 p-2 sm:p-4">
-        <BorderBeam
-          size={80}
-          duration={8}
-          colorFrom={accentColor}
-          colorTo={accentColor}
-          borderWidth={2}
-        />
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-muted/20 p-2 shadow-xs sm:p-4">
         <div className="relative flex justify-center">
           <div className="hidden xl:block">
             <IPhoneMockup model="15-pro" scale={0.72} color="space-black">

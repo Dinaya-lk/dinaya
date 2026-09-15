@@ -505,17 +505,8 @@
 }
 
 @layer utilities {
-  /* Hide scrollbar globally but preserve scrolling functionality */
-  html,
-  body {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
-  }
-  html::-webkit-scrollbar,
-  body::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
-  }
-
+  /* Keep native scrollbars visible site-wide for keyboard/low-vision users.
+     Use `.scrollbar-hide` only for carousels and snap strips. */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
