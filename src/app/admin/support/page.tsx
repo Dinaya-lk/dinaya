@@ -4,6 +4,7 @@ import Link from "next/link";
 import { db } from "@/db";
 import { businesses, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { likePattern } from "@/lib/like";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { RefundPaymentForm } from "./RefundPaymentForm";
 import { SupportClient } from "./SupportClient";
@@ -20,7 +21,7 @@ export default async function AdminSupportPage({
   const q = (sp.q ?? "").trim();
 
   const whereExpr = q
-    ? or(ilike(users.email, `%${q}%`), ilike(users.name, `%${q}%`), ilike(businesses.name, `%${q}%`))
+    ? or(ilike(users.email, likePattern(q)), ilike(users.name, likePattern(q)), ilike(businesses.name, likePattern(q)))
     : undefined;
 
   const rows = await safeAdminQuery(

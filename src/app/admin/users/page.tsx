@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { db } from "@/db";
 import { businesses, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { likePattern } from "@/lib/like";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { listPlatformAdminMembers } from "@/lib/platform-admin-members";
 
@@ -28,7 +29,7 @@ export default async function AdminUsersPage({
   const roleFilter = sp.role && sp.role !== "all" ? sp.role : null;
 
   const searchExpr = q
-    ? or(ilike(users.email, `%${q}%`), ilike(users.name, `%${q}%`))
+    ? or(ilike(users.email, likePattern(q)), ilike(users.name, likePattern(q)))
     : undefined;
   const roleExpr = roleFilter ? eq(users.role, roleFilter) : undefined;
   const whereExpr =

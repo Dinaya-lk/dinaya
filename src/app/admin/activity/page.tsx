@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { db } from "@/db";
 import { activityLog, businesses, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { likePattern } from "@/lib/like";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function AdminActivityPage({
   const entity = (sp.entity ?? "").trim();
 
   const searchExpr = q
-    ? or(ilike(activityLog.action, `%${q}%`), ilike(businesses.name, `%${q}%`))
+    ? or(ilike(activityLog.action, likePattern(q)), ilike(businesses.name, likePattern(q)))
     : undefined;
   const entityExpr = entity ? eq(activityLog.entity, entity) : undefined;
   const whereExpr =

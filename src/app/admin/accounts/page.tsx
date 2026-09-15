@@ -5,6 +5,7 @@ import { ChevronRight, Search } from "lucide-react";
 import { db } from "@/db";
 import { bookings, businesses, subscriptions, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { likePattern } from "@/lib/like";
 import { planDisplayName, type Plan } from "@/lib/plan";
 import { formatLkr } from "@/lib/utils";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
@@ -28,9 +29,9 @@ export default async function AdminAccountsPage({
 
   const searchExpr = q
     ? or(
-        ilike(businesses.name, `%${q}%`),
-        ilike(businesses.slug, `%${q}%`),
-        ilike(businesses.email, `%${q}%`)
+        ilike(businesses.name, likePattern(q)),
+        ilike(businesses.slug, likePattern(q)),
+        ilike(businesses.email, likePattern(q))
       )
     : undefined;
   const planExpr = planFilter ? eq(businesses.plan, planFilter) : undefined;
