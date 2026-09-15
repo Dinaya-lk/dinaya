@@ -123,7 +123,8 @@ export function BeforeAfterToggle() {
           <button
             key={tab}
             onClick={() => setActive(tab)}
-            className={`relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors ${
+            aria-pressed={active === tab}
+            className={`relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2 ${
               active === tab
                 ? tab === "with"
                   ? "text-white"

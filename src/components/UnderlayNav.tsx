@@ -160,7 +160,7 @@ export function UnderlayNav() {
             onClick={toggle}
             aria-expanded={isOpen}
             aria-label={isOpen ? "Close menu" : "Open menu"}
-            className="flex items-center gap-2.5 -m-2 p-2 select-none relative z-10"
+            className="flex items-center gap-2.5 -m-2 rounded-lg p-2 select-none relative z-10 focus-visible:outline-hidden focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2"
           >
             <span className="flex flex-col gap-[0.3em] w-4" aria-hidden="true">
               <motion.span
