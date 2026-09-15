@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { retryDueWebhookDeliveries } from "@/lib/webhook-retries";
+import { acquireCronLock } from "@/lib/cron-lock";
 import { getCronSecret } from "@/lib/env";
 
 export async function GET(req: NextRequest) {
@@ -11,6 +12,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const lock = await acquireCronLock("webhook-retries");
+  if (!lock.locked) {
+    return NextResponse.json({ locked: true, skipped: true });
+  }
+
   try {
     const retried = await retryDueWebhookDeliveries();
     return NextResponse.json({ retried });
@@ -18,5 +24,7 @@ export async function GET(req: NextRequest) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[cron/webhook-retries] unhandled error:", message, err);
     return NextResponse.json({ error: message }, { status: 500 });
+  } finally {
+    await lock.release();
   }
 }

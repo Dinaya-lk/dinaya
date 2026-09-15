@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { syncGoogleCalendarBookings } from "@/lib/google-calendar-sync";
+import { acquireCronLock } from "@/lib/cron-lock";
 import { getCronSecret } from "@/lib/env";
 
 export async function GET(req: Request) {
@@ -11,6 +12,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const lock = await acquireCronLock("google-calendar-sync");
+  if (!lock.locked) {
+    return NextResponse.json({ locked: true, skipped: true });
+  }
+
   try {
     const synced = await syncGoogleCalendarBookings();
     return NextResponse.json({ ok: true, synced });
@@ -18,5 +24,7 @@ export async function GET(req: Request) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[cron/google-calendar-sync] unhandled error:", message, err);
     return NextResponse.json({ error: message }, { status: 500 });
+  } finally {
+    await lock.release();
   }
 }

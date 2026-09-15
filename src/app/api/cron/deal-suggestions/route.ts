@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateDealSuggestions } from "@/lib/deals/suggestions";
 import { expirePastDeals } from "@/lib/deals/queries";
+import { acquireCronLock } from "@/lib/cron-lock";
 import { getCronSecret } from "@/lib/env";
 
 export async function GET(req: NextRequest) {
@@ -13,6 +14,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const lock = await acquireCronLock("deal-suggestions");
+  if (!lock.locked) {
+    return NextResponse.json({ locked: true, skipped: true });
+  }
+
   try {
     const [summary, expiredDeals] = await Promise.all([
       generateDealSuggestions(),
@@ -23,5 +29,7 @@ export async function GET(req: NextRequest) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[cron/deal-suggestions] unhandled error:", message, err);
     return NextResponse.json({ error: message }, { status: 500 });
+  } finally {
+    await lock.release();
   }
 }

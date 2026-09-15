@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { expireAbandonedPayhereBookings } from "@/lib/booking-expiry";
+import { acquireCronLock } from "@/lib/cron-lock";
 import { getCronSecret } from "@/lib/env";
 
 export async function GET(req: NextRequest) {
@@ -13,6 +14,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await expireAbandonedPayhereBookings();
-  return NextResponse.json(result);
+  const lock = await acquireCronLock("expire-pending-bookings");
+  if (!lock.locked) {
+    return NextResponse.json({ locked: true, skipped: true });
+  }
+
+  try {
+    const result = await expireAbandonedPayhereBookings();
+    return NextResponse.json(result);
+  } finally {
+    await lock.release();
+  }
 }
