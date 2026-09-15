@@ -18,6 +18,7 @@ interface SlotsEmptyViewProps {
   emptyState: SlotEmptyState;
   nextAvailable?: NextAvailableSlot | null;
   onNextAvailable?: (slot: NextAvailableSlot) => void;
+  onRetry?: () => void;
   variant?: "list" | "grid";
 }
 
@@ -25,6 +26,7 @@ function emptyMessage(copy: BookingCopy, emptyState: SlotEmptyState) {
   if (emptyState === "closed") return copy.dayClosed;
   if (emptyState === "capacity") return copy.capacityReached;
   if (emptyState === "full") return copy.dayFull;
+  if (emptyState === "error") return copy.slotsLoadError;
   return copy.noSlots;
 }
 
@@ -38,11 +40,12 @@ export function SlotsEmptyView({
   emptyState,
   nextAvailable,
   onNextAvailable,
+  onRetry,
   variant = "list",
 }: SlotsEmptyViewProps) {
   const message = emptyMessage(copy, emptyState);
   const showNext =
-    nextAvailable && onNextAvailable && emptyState !== "none";
+    nextAvailable && onNextAvailable && emptyState !== "none" && emptyState !== "error";
   const nextLabel = showNext
     ? `${format(parseISO(nextAvailable.date + "T12:00:00"), "EEE d MMM")} · ${nextAvailable.label}`
     : null;
@@ -77,6 +80,15 @@ export function SlotsEmptyView({
       <div className="rounded-2xl border border-border/60 bg-muted/40 px-4 py-8 text-center">
         <div className="mx-auto mb-3 w-fit">{iconBadge}</div>
         <p className="text-sm font-medium text-foreground/80">{message}</p>
+        {emptyState === "error" && onRetry ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mx-auto mt-4 flex min-h-11 items-center justify-center rounded-lg booking-bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-xs"
+          >
+            {copy.tryAgain}
+          </button>
+        ) : null}
         {nextAvailableBlock}
       </div>
     );
@@ -86,6 +98,15 @@ export function SlotsEmptyView({
     <div className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-border/60 bg-muted/40 px-4 py-8 text-center">
       {iconBadge}
       <p className="max-w-xs text-sm font-medium leading-relaxed text-foreground/80">{message}</p>
+      {emptyState === "error" && onRetry ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="flex min-h-11 items-center justify-center rounded-lg booking-bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-xs"
+        >
+          {copy.tryAgain}
+        </button>
+      ) : null}
       {nextAvailableBlock}
     </div>
   );

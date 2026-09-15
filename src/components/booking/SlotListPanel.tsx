@@ -42,6 +42,7 @@ interface SlotListPanelProps {
   busyTimes?: CalendarBusyTime[];
   nextAvailable?: NextAvailableSlot | null;
   onNextAvailable?: (slot: NextAvailableSlot) => void;
+  onRetry?: () => void;
 }
 
 export function SlotListPanel({
@@ -56,6 +57,7 @@ export function SlotListPanel({
   busyTimes = [],
   nextAvailable,
   onNextAvailable,
+  onRetry,
 }: SlotListPanelProps) {
   if (loading) {
     return <SlotListPanelSkeleton label={copy.loadingAvailableTimes} />;
@@ -68,6 +70,7 @@ export function SlotListPanel({
         emptyState={emptyState}
         nextAvailable={nextAvailable}
         onNextAvailable={onNextAvailable}
+        onRetry={onRetry}
         variant="list"
       />
     );
