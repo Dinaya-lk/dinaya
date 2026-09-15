@@ -2,7 +2,9 @@ name: Booking reminders cron
 
 on:
   schedule:
-    - cron: "30 4 * * *"
+    # Hourly: the endpoint covers bookings 20–28h out, so a daily tick would
+    # miss bookings created after the run that fall inside the window.
+    - cron: "30 * * * *"
   workflow_dispatch:
 
 jobs:
