@@ -40,6 +40,8 @@ vi.mock("@/lib/activity-log", () => ({
   logActivity: vi.fn().mockResolvedValue(undefined),
 }));
 
+import { logActivity } from "@/lib/activity-log";
+
 vi.mock("@/lib/secrets", () => ({
   decryptSecret: decryptSecretMock,
 }));
@@ -187,5 +189,98 @@ describe("POST /api/webhooks/payhere", () => {
       }),
     );
     expect(releaseDealSlotForBookingMock).toHaveBeenCalledWith(bookingRow.id, "pending");
+  });
+
+  it("flags a post-success chargeback as disputed instead of swallowing it", async () => {
+    parsePayhereWebhookFieldsMock.mockReturnValue({
+      merchantId: "merchant-123",
+      orderId: "order-123",
+      payhereAmount: "5000.00",
+      payhereCurrency: "LKR",
+      statusCode: "-3",
+      md5sig: "sig-123",
+    });
+    dbSelectMock
+      .mockReturnValueOnce(makeSelectQuery([{ ...paymentRow, status: "success" }]))
+      .mockReturnValueOnce(makeSelectQuery([{ ...bookingRow, status: "confirmed" }]))
+      .mockReturnValueOnce(makeSelectQuery([businessBaseRow]));
+
+    // pending->failed transition matches nothing (already successful)
+    dbUpdateMock.mockReturnValueOnce(makeUpdateQuery([]));
+    const disputeUpdate = makeUpdateQuery([]);
+    dbUpdateMock.mockReturnValueOnce(disputeUpdate);
+
+    const req = {
+      formData: vi.fn().mockResolvedValue(new FormData()),
+    } as unknown as Parameters<typeof POST>[0];
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ received: true });
+    expect(disputeUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        refundReason: expect.stringContaining("chargeback"),
+      }),
+    );
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "payment_disputed" }),
+    );
+  });
+
+  it("flags an orphaned late payment for manual refund", async () => {
+    parsePayhereWebhookFieldsMock.mockReturnValue({
+      merchantId: "merchant-123",
+      orderId: "order-123",
+      payhereAmount: "5000.00",
+      payhereCurrency: "LKR",
+      statusCode: "2",
+      md5sig: "sig-123",
+    });
+    const cancelledRow = {
+      ...bookingRow,
+      status: "cancelled",
+      cancellationReason: "Payment not completed in time.",
+      endsAt: new Date("2026-06-25T10:00:00.000Z"),
+    };
+    dbSelectMock
+      .mockReturnValueOnce(makeSelectQuery([paymentRow]))
+      .mockReturnValueOnce(makeSelectQuery([cancelledRow]))
+      .mockReturnValueOnce(makeSelectQuery([businessBaseRow]))
+      // current payment already failed (expiry cron won the race)
+      .mockReturnValueOnce(makeSelectQuery([{ status: "failed" }]))
+      // slot taken by another booking -> recovery impossible
+      .mockReturnValueOnce(makeSelectQuery([{ id: "other-booking" }]))
+      // no service row -> skip capacity check
+      .mockReturnValueOnce(makeSelectQuery([]));
+
+    // pending->success claim matches nothing (already failed)
+    dbUpdateMock.mockReturnValueOnce(makeUpdateQuery([]));
+    // mark-success update
+    dbUpdateMock.mockReturnValueOnce(makeUpdateQuery([{ id: paymentRow.id }]));
+    const orphanUpdate = makeUpdateQuery([]);
+    dbUpdateMock.mockReturnValueOnce(orphanUpdate);
+
+    const req = {
+      formData: vi.fn().mockResolvedValue(new FormData()),
+    } as unknown as Parameters<typeof POST>[0];
+
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ received: true, orphaned: true });
+    expect(orphanUpdate.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        refundReason: expect.stringContaining("manual refund needed"),
+      }),
+    );
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "payment_orphaned",
+        meta: expect.objectContaining({ needsManualRefund: true }),
+      }),
+    );
   });
 });
