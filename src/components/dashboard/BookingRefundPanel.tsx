@@ -126,7 +126,7 @@ export function BookingRefundPanel({ bookingId, payment, onUpdated }: Props) {
         open={open}
         onOpenChange={setOpen}
         title="Record this refund?"
-        description={`This marks ${formatLkr(confirmAmount)} as refunded on the booking. Send the money back in ${payment.provider === "payhere" ? "PayHere" : payment.provider === "paypal" ? "PayPal" : "your bank or LankaQR"} first if you have not already.`}
+        description={`This marks ${formatLkr(confirmAmount)} as refunded on the booking. Send the money back in ${payment.provider === "payhere" ? "PayHere" : payment.provider === "paypal" ? "PayPal" : payment.provider === "payments_lk" ? "Payments.lk" : "your bank or LankaQR"} first if you have not already.`}
         confirmLabel={saving ? "Saving…" : "Record refund"}
         variant="destructive"
         onConfirm={() => {

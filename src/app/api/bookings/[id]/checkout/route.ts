@@ -8,6 +8,7 @@ import { hasPublicColumn } from "@/lib/dashboard/db-compat";
 import { parseRequiredBusinessSlug } from "@/lib/booking/public-booking-access";
 import { createPayhereCheckout } from "@/lib/payments/providers/payhere";
 import { createPaypalCheckout, getPaypalOrder } from "@/lib/payments/providers/paypal";
+import { createPaymentsLkCheckoutForBooking } from "@/lib/payments/providers/payments-lk";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
   const includePaypal = await hasPublicColumn("businesses", "paypal_enabled");
+  const includePaymentsLk = await hasPublicColumn("businesses", "payments_lk_enabled");
   const includePaymentProvider = await hasPublicColumn("payments", "provider");
 
   const [row] = await db
@@ -46,6 +48,12 @@ export async function GET(req: NextRequest, context: RouteContext) {
             paypalEnabled: businesses.paypalEnabled,
             paypalClientId: businesses.paypalClientId,
             paypalClientSecret: businesses.paypalClientSecret,
+          }
+        : {}),
+      ...(includePaymentsLk
+        ? {
+            paymentsLkEnabled: businesses.paymentsLkEnabled,
+            paymentsLkSecretKey: businesses.paymentsLkSecretKey,
           }
         : {}),
       serviceName: services.name,
@@ -86,6 +94,12 @@ export async function GET(req: NextRequest, context: RouteContext) {
     : null;
   const paypalClientSecret = includePaypal
     ? ((row as { paypalClientSecret?: string | null }).paypalClientSecret ?? null)
+    : null;
+  const paymentsLkEnabled = includePaymentsLk
+    ? Boolean((row as { paymentsLkEnabled?: boolean }).paymentsLkEnabled)
+    : false;
+  const paymentsLkSecretKey = includePaymentsLk
+    ? ((row as { paymentsLkSecretKey?: string | null }).paymentsLkSecretKey ?? null)
     : null;
 
   if (row.bookingStatus !== "pending" || row.paymentStatus !== "pending" || !row.paymentId) {
@@ -138,6 +152,24 @@ export async function GET(req: NextRequest, context: RouteContext) {
     return NextResponse.json({
       provider: "paypal",
       approvalUrl: paypal.approvalUrl,
+    });
+  }
+
+  if (paymentProvider === "payments_lk") {
+    const secretKey = decryptSecret(paymentsLkSecretKey);
+    if (!paymentsLkEnabled || !secretKey) {
+      return NextResponse.json({ error: "Payments.lk checkout unavailable" }, { status: 400 });
+    }
+
+    const checkout = await createPaymentsLkCheckoutForBooking({
+      ...checkoutContext,
+      secretKey,
+      orderId: providerOrderId ?? row.bookingId,
+    });
+
+    return NextResponse.json({
+      provider: "payments_lk",
+      checkoutUrl: checkout.checkoutUrl,
     });
   }
 

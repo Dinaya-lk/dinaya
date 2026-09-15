@@ -68,6 +68,9 @@ type SettingsBusiness = {
   paypalEnabled: boolean;
   paypalClientId: string | null;
   hasPaypalClientSecret: boolean;
+  paymentsLkEnabled: boolean;
+  hasPaymentsLkSecretKey: boolean;
+  hasPaymentsLkWebhookSecret: boolean;
   hideDinayaBranding: boolean;
   accentColor: string | null;
   customDomain: string | null;
@@ -136,6 +139,9 @@ export default function SettingsForm({ business }: Props) {
     paypalEnabled: business.paypalEnabled,
     paypalClientId: business.paypalClientId ?? "",
     paypalClientSecret: "",
+    paymentsLkEnabled: business.paymentsLkEnabled,
+    paymentsLkSecretKey: "",
+    paymentsLkWebhookSecret: "",
   });
 
   const [galleryImages, setGalleryImages] = useState<string[]>(
@@ -158,6 +164,8 @@ export default function SettingsForm({ business }: Props) {
       payhereMerchantSecret: form.payhereMerchantSecret.trim() || undefined,
       paypalClientId: form.paypalClientId.trim() || null,
       paypalClientSecret: form.paypalClientSecret.trim() || undefined,
+      paymentsLkSecretKey: form.paymentsLkSecretKey.trim() || undefined,
+      paymentsLkWebhookSecret: form.paymentsLkWebhookSecret.trim() || undefined,
     };
 
     const result = await submitResource("/api/dashboard/settings", payload);
@@ -482,6 +490,48 @@ export default function SettingsForm({ business }: Props) {
                       onChange={(value) => setForm((f) => ({ ...f, payhereMerchantSecret: value }))}
                       placeholder={business.hasPayhereMerchantSecret ? "Saved - leave blank to keep existing" : "Paste merchant secret"}
                       hint={business.hasPayhereMerchantSecret ? "A secret is saved. Enter a new value only when rotating it." : undefined}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className={cardClass}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="size-4 text-muted-foreground" />
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Payments.lk</p>
+                  </div>
+                  <StatusPill enabled={form.paymentsLkEnabled} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Accept online payments via{" "}
+                  <a href="https://payments.lk" target="_blank" rel="noopener noreferrer" className="underline">
+                    Payments.lk
+                  </a>
+                  . Enter your Secret Key and webhook signing secret from the Payments.lk dashboard, under Developers.
+                </p>
+                <DashboardSwitch
+                  label="Enable Payments.lk for this business"
+                  isSelected={form.paymentsLkEnabled}
+                  onChange={(isSelected) => setForm((f) => ({ ...f, paymentsLkEnabled: isSelected }))}
+                />
+                {form.paymentsLkEnabled && (
+                  <div className="space-y-3 pl-5 border-l-2 border-primary/20">
+                    <DashboardTextField
+                      label="Secret Key"
+                      type="password"
+                      value={form.paymentsLkSecretKey}
+                      onChange={(value) => setForm((f) => ({ ...f, paymentsLkSecretKey: value }))}
+                      placeholder={business.hasPaymentsLkSecretKey ? "Saved - leave blank to keep existing" : "sk_live_..."}
+                      hint={business.hasPaymentsLkSecretKey ? "A secret is saved. Enter a new value only when rotating it." : undefined}
+                    />
+                    <DashboardTextField
+                      label="Webhook signing secret"
+                      type="password"
+                      value={form.paymentsLkWebhookSecret}
+                      onChange={(value) => setForm((f) => ({ ...f, paymentsLkWebhookSecret: value }))}
+                      placeholder={business.hasPaymentsLkWebhookSecret ? "Saved - leave blank to keep existing" : "whsec_..."}
+                      hint="From the endpoint you register in the Payments.lk dashboard for this booking page."
                     />
                   </div>
                 )}

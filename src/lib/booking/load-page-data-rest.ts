@@ -38,6 +38,7 @@ function mapBusiness(row: JsonRow) {
     planExpiresAt: asDate(row.plan_expires_at),
     payhereEnabled: Boolean(row.payhere_enabled),
     paypalEnabled: Boolean(row.paypal_enabled),
+    paymentsLkEnabled: Boolean(row.payments_lk_enabled),
     hideDinayaBranding: Boolean(row.hide_dinaya_branding),
     accentColor: (row.accent_color as string | null) ?? null,
     bookingPageBackground: (row.booking_page_background as string | null) ?? "white",

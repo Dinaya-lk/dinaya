@@ -76,6 +76,9 @@ const settingsSchema = z
     paypalEnabled: z.boolean().optional(),
     paypalClientId: z.string().trim().max(200).optional().nullable(),
     paypalClientSecret: z.string().trim().max(1000).optional().nullable(),
+    paymentsLkEnabled: z.boolean().optional(),
+    paymentsLkSecretKey: z.string().trim().max(300).optional().nullable(),
+    paymentsLkWebhookSecret: z.string().trim().max(300).optional().nullable(),
     hideDinayaBranding: z.boolean().optional(),
   })
   .merge(bookingThemeFieldsSchema);
@@ -112,6 +115,9 @@ export async function PATCH(req: NextRequest) {
     paypalEnabled,
     paypalClientId,
     paypalClientSecret,
+    paymentsLkEnabled,
+    paymentsLkSecretKey,
+    paymentsLkWebhookSecret,
     hideDinayaBranding,
     accentColor,
     bookingPageBackground,
@@ -231,6 +237,17 @@ export async function PATCH(req: NextRequest) {
       ...(paypalClientSecret !== undefined && paypalClientSecret !== null && {
         paypalClientSecret: paypalClientSecret.trim()
           ? encryptSecret(paypalClientSecret)
+          : null,
+      }),
+      ...(paymentsLkEnabled !== undefined && { paymentsLkEnabled: Boolean(paymentsLkEnabled) }),
+      ...(paymentsLkSecretKey !== undefined && paymentsLkSecretKey !== null && {
+        paymentsLkSecretKey: paymentsLkSecretKey.trim()
+          ? encryptSecret(paymentsLkSecretKey)
+          : null,
+      }),
+      ...(paymentsLkWebhookSecret !== undefined && paymentsLkWebhookSecret !== null && {
+        paymentsLkWebhookSecret: paymentsLkWebhookSecret.trim()
+          ? encryptSecret(paymentsLkWebhookSecret)
           : null,
       }),
       ...(hideDinayaBranding !== undefined && { hideDinayaBranding: Boolean(hideDinayaBranding) }),

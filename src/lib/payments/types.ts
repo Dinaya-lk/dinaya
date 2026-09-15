@@ -1,8 +1,8 @@
-export const PAYMENT_PROVIDERS = ["payhere", "paypal", "manual"] as const;
+export const PAYMENT_PROVIDERS = ["payhere", "paypal", "payments_lk", "manual"] as const;
 
 export type PaymentProviderId = (typeof PAYMENT_PROVIDERS)[number];
 
-export type PaymentMethodChoice = "payhere" | "paypal" | "manual";
+export type PaymentMethodChoice = "payhere" | "paypal" | "payments_lk" | "manual";
 
 export type BookingCheckoutResult =
   | {
@@ -23,6 +23,11 @@ export type BookingCheckoutResult =
       approvalUrl: string;
     }
   | {
+      kind: "payments_lk";
+      bookingId: string;
+      checkoutUrl: string;
+    }
+  | {
       kind: "manual";
       bookingId: string;
       manualPayment: true;
@@ -36,6 +41,9 @@ export type PaymentBusinessConfig = {
   paypalEnabled: boolean;
   paypalClientId: string | null;
   paypalClientSecret: string | null;
+  paymentsLkEnabled: boolean;
+  paymentsLkSecretKey: string | null;
+  paymentsLkWebhookSecret: string | null;
   bankTransferInstructions: string | null;
   lankaqrImageUrl: string | null;
 };

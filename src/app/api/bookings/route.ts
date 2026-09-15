@@ -68,7 +68,7 @@ const bookingSchema = z.object({
   priceVariantId: z.string().trim().min(1).max(40).optional().nullable(),
   dealId: z.uuid().optional().nullable(),
   sessionToken: z.string().min(16).max(64).optional().nullable(),
-  paymentMethod: z.enum(["payhere", "paypal", "manual"]).optional().nullable(),
+  paymentMethod: z.enum(["payhere", "paypal", "payments_lk", "manual"]).optional().nullable(),
   source: z.enum(["public", "manual", "api", "import", "voice_agent", "deals"]).optional(),
   attribution: z.object({
     utmSource: z.string().trim().max(80).optional().nullable(),
@@ -401,12 +401,14 @@ export async function POST(req: NextRequest) {
 
   const hasPayhereSecret = Boolean(decryptSecret(business.payhereMerchantSecret));
   const hasPaypalSecret = Boolean(decryptSecret(business.paypalClientSecret));
+  const hasPaymentsLkSecret = Boolean(decryptSecret(business.paymentsLkSecretKey));
   const paymentMethods = getAvailablePaymentMethods(
     business,
     service.requiresPayment,
     amountDueLkr,
     hasPayhereSecret,
     hasPaypalSecret,
+    hasPaymentsLkSecret,
   );
 
   const publicPaymentRequired = Boolean(
@@ -420,7 +422,9 @@ export async function POST(req: NextRequest) {
     ? resolveOnlinePaymentMethod({
         methods: paymentMethods,
         requested:
-          requestedPaymentMethod === "payhere" || requestedPaymentMethod === "paypal"
+          requestedPaymentMethod === "payhere" ||
+          requestedPaymentMethod === "paypal" ||
+          requestedPaymentMethod === "payments_lk"
             ? requestedPaymentMethod
             : undefined,
         clientPhone,
@@ -769,6 +773,19 @@ export async function POST(req: NextRequest) {
           bookingId: booking.id,
           provider: "paypal",
           approvalUrl: checkout.approvalUrl,
+        },
+      });
+    }
+
+    if (checkout.kind === "payments_lk") {
+      return finalizeBookingResponse({
+        idempotencyKey,
+        businessId,
+        requestHash: idempotencyRequestHash,
+        body: {
+          bookingId: booking.id,
+          provider: "payments_lk",
+          checkoutUrl: checkout.checkoutUrl,
         },
       });
     }

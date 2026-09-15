@@ -278,6 +278,9 @@ export default function StepConfirm({
       paypalEnabled: Boolean(business.paypalEnabled),
       paypalClientId: business.paypalEnabled ? "configured" : null,
       paypalClientSecret: business.paypalEnabled ? "configured" : null,
+      paymentsLkEnabled: Boolean(business.paymentsLkEnabled),
+      paymentsLkSecretKey: business.paymentsLkEnabled ? "configured" : null,
+      paymentsLkWebhookSecret: business.paymentsLkEnabled ? "configured" : null,
       bankTransferInstructions: business.bankTransferInstructions ?? null,
       lankaqrImageUrl: business.lankaqrImageUrl ?? null,
     },
@@ -285,15 +288,19 @@ export default function StepConfirm({
     dueNow,
     Boolean(business.payhereEnabled),
     Boolean(business.paypalEnabled),
-  ).filter((method) => method === "payhere" || method === "paypal") as Array<"payhere" | "paypal">;
+    Boolean(business.paymentsLkEnabled),
+  ).filter(
+    (method) => method === "payhere" || method === "paypal" || method === "payments_lk",
+  ) as Array<"payhere" | "paypal" | "payments_lk">;
 
-  const [paymentMethod, setPaymentMethod] = useState<"payhere" | "paypal">(() =>
-    resolveDefaultPaymentMethod(onlineMethods, state.clientPhone) === "paypal" ? "paypal" : "payhere",
-  );
+  const [paymentMethod, setPaymentMethod] = useState<"payhere" | "paypal" | "payments_lk">(() => {
+    const resolved = resolveDefaultPaymentMethod(onlineMethods, state.clientPhone);
+    return resolved === "paypal" || resolved === "payments_lk" ? resolved : "payhere";
+  });
 
   useEffect(() => {
     const next = resolveDefaultPaymentMethod(onlineMethods, state.clientPhone);
-    if (next === "payhere" || next === "paypal") {
+    if (next === "payhere" || next === "paypal" || next === "payments_lk") {
       setPaymentMethod(next);
     }
   }, [onlineMethods, state.clientPhone]);
@@ -647,6 +654,7 @@ export default function StepConfirm({
         {(
           [
             { id: "payhere" as const, label: copy.paymentMethodPayhere },
+            { id: "payments_lk" as const, label: copy.paymentMethodPaymentsLk },
             { id: "paypal" as const, label: copy.paymentMethodPaypal },
           ] as const
         )

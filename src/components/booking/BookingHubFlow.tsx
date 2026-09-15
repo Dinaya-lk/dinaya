@@ -37,6 +37,7 @@ type Business = {
   lankaqrImageUrl: string | null;
   payhereEnabled: boolean;
   paypalEnabled: boolean;
+  paymentsLkEnabled?: boolean;
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   websiteUrl?: string | null;
@@ -183,6 +184,7 @@ export function BookingHubFlow({
           name: business.name,
           payhereEnabled: business.payhereEnabled,
           paypalEnabled: business.paypalEnabled,
+          paymentsLkEnabled: business.paymentsLkEnabled,
           slug: business.slug,
           logoUrl: business.logoUrl,
           hideBranding,

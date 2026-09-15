@@ -6,6 +6,7 @@ import { decryptSecret } from "@/lib/secrets";
 import { hasPublicColumn } from "@/lib/dashboard/db-compat";
 import { createPayhereCheckout } from "@/lib/payments/providers/payhere";
 import { createPaypalCheckout } from "@/lib/payments/providers/paypal";
+import { createPaymentsLkCheckoutForBooking } from "@/lib/payments/providers/payments-lk";
 import {
   getAvailablePaymentMethods,
   resolveOnlinePaymentMethod,
@@ -28,10 +29,11 @@ export async function startBookingCheckout(input: {
   amountLkr: number;
   requiresPayment: boolean;
   appUrl: string;
-  paymentMethod?: "payhere" | "paypal" | null;
+  paymentMethod?: "payhere" | "paypal" | "payments_lk" | null;
 }): Promise<BookingCheckoutResult> {
   const hasPayhereSecret = Boolean(decryptSecret(input.business.payhereMerchantSecret));
   const hasPaypalSecret = Boolean(decryptSecret(input.business.paypalClientSecret));
+  const hasPaymentsLkSecret = Boolean(decryptSecret(input.business.paymentsLkSecretKey));
 
   const methods = getAvailablePaymentMethods(
     input.business,
@@ -39,6 +41,7 @@ export async function startBookingCheckout(input: {
     input.amountLkr,
     hasPayhereSecret,
     hasPaypalSecret,
+    hasPaymentsLkSecret,
   );
 
   if (!input.requiresPayment || input.amountLkr <= 0) {
@@ -123,7 +126,48 @@ export async function startBookingCheckout(input: {
 
   const hasProviderColumns = await hasPublicColumn("payments", "provider");
   if (!hasProviderColumns) {
-    throw new Error("PayPal checkout requires a database migration. PayHere is available.");
+    throw new Error("This payment method requires a database migration. PayHere is available.");
+  }
+
+  if (onlineMethod === "payments_lk") {
+    const secretKey = decryptSecret(input.business.paymentsLkSecretKey);
+    if (!secretKey) {
+      throw new Error("Payments.lk credentials are incomplete.");
+    }
+
+    const orderId = generateOrderId();
+    const [payment] = await db
+      .insert(payments)
+      .values({
+        bookingId: input.bookingId,
+        amountLkr: input.amountLkr,
+        provider: "payments_lk",
+        currency: "LKR",
+        providerOrderId: orderId,
+        status: "pending",
+      })
+      .returning({ id: payments.id });
+
+    if (!payment) {
+      throw new Error("Could not create payment record.");
+    }
+
+    const checkout = await createPaymentsLkCheckoutForBooking({
+      ...checkoutContext,
+      secretKey,
+      orderId,
+    });
+
+    await db
+      .update(payments)
+      .set({ providerPayload: { checkoutId: checkout.checkoutId } })
+      .where(eq(payments.id, payment.id));
+
+    return {
+      kind: "payments_lk",
+      bookingId: input.bookingId,
+      checkoutUrl: checkout.checkoutUrl,
+    };
   }
 
   const clientId = input.business.paypalClientId;

@@ -6,7 +6,8 @@ import { Icon } from "@/components/ui/Icon";
 
 type CheckoutState =
   | { provider: "payhere"; payhereFormData: Record<string, string>; payhereUrl: string }
-  | { provider: "paypal"; approvalUrl: string };
+  | { provider: "paypal"; approvalUrl: string }
+  | { provider: "payments_lk"; approvalUrl: string };
 
 interface Props {
   slug: string;
@@ -46,6 +47,11 @@ export default function PaymentRedirect({ slug, copy }: Props) {
         return;
       }
 
+      if (data.provider === "payments_lk" && data.checkoutUrl) {
+        setCheckout({ provider: "payments_lk", approvalUrl: data.checkoutUrl });
+        return;
+      }
+
       if (data.provider === "payhere" && data.payhereUrl && data.payhereFormData) {
         setCheckout({
           provider: "payhere",
@@ -67,7 +73,7 @@ export default function PaymentRedirect({ slug, copy }: Props) {
     if (!checkout) return;
 
     const timeoutId = window.setTimeout(() => {
-      if (checkout.provider === "paypal") {
+      if (checkout.provider === "paypal" || checkout.provider === "payments_lk") {
         window.location.href = checkout.approvalUrl;
         return;
       }
@@ -95,7 +101,7 @@ export default function PaymentRedirect({ slug, copy }: Props) {
     );
   }
 
-  if (checkout.provider === "paypal") {
+  if (checkout.provider === "paypal" || checkout.provider === "payments_lk") {
     return (
       <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-xs">
         <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">

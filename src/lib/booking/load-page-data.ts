@@ -23,9 +23,10 @@ export async function loadBookingPageData(slug: string, serviceSlug?: string) {
 }
 
 async function loadBookingPageDataInner(slug: string, serviceSlug?: string) {
-  const [includePaypal, includeAccentColor, includeBookingTheme, includeBookingRouter, includeServiceSlug, includeServiceImage] =
+  const [includePaypal, includePaymentsLk, includeAccentColor, includeBookingTheme, includeBookingRouter, includeServiceSlug, includeServiceImage] =
     await Promise.all([
       hasPublicColumn("businesses", "paypal_enabled"),
+      hasPublicColumn("businesses", "payments_lk_enabled"),
       hasPublicColumn("businesses", "accent_color"),
       hasPublicColumn("businesses", "booking_page_background"),
       hasPublicColumn("businesses", "booking_router"),
@@ -56,6 +57,7 @@ async function loadBookingPageDataInner(slug: string, serviceSlug?: string) {
       planExpiresAt: businesses.planExpiresAt,
       payhereEnabled: businesses.payhereEnabled,
       ...(includePaypal ? { paypalEnabled: businesses.paypalEnabled } : {}),
+      ...(includePaymentsLk ? { paymentsLkEnabled: businesses.paymentsLkEnabled } : {}),
       phone: businesses.phone,
       slug: businesses.slug,
       websiteUrl: businesses.websiteUrl,
@@ -107,6 +109,9 @@ async function loadBookingPageDataInner(slug: string, serviceSlug?: string) {
           : null,
         paypalEnabled: includePaypal
           ? Boolean((businessRow as { paypalEnabled?: boolean }).paypalEnabled)
+          : false,
+        paymentsLkEnabled: includePaymentsLk
+          ? Boolean((businessRow as { paymentsLkEnabled?: boolean }).paymentsLkEnabled)
           : false,
       }
     : null;

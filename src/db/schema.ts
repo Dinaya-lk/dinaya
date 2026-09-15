@@ -140,6 +140,9 @@ export const businesses = pgTable("businesses", {
   paypalEnabled: boolean("paypal_enabled").default(false).notNull(),
   paypalClientId: varchar("paypal_client_id", { length: 200 }),
   paypalClientSecret: text("paypal_client_secret"),
+  paymentsLkEnabled: boolean("payments_lk_enabled").default(false).notNull(),
+  paymentsLkSecretKey: text("payments_lk_secret_key"),
+  paymentsLkWebhookSecret: text("payments_lk_webhook_secret"),
   hideDinayaBranding: boolean("hide_dinaya_branding").default(false).notNull(),
   // Hex accent for public booking page theming (e.g. #2563eb). Pro+ customization.
   accentColor: varchar("accent_color", { length: 7 }),

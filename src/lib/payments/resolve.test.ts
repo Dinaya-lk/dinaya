@@ -13,6 +13,9 @@ const business = {
   paypalEnabled: true,
   paypalClientId: "cid",
   paypalClientSecret: "secret",
+  paymentsLkEnabled: false,
+  paymentsLkSecretKey: null,
+  paymentsLkWebhookSecret: null,
   bankTransferInstructions: null,
   lankaqrImageUrl: null,
 };
@@ -39,5 +42,35 @@ describe("payment resolve", () => {
       methods,
       clientPhone: "+14155550123",
     })).toBe("paypal");
+  });
+
+  it("lists payments_lk when configured", () => {
+    const withPaymentsLk = { ...business, paymentsLkEnabled: true };
+    const methods = getAvailablePaymentMethods(withPaymentsLk, true, 5000, true, true, true);
+    expect(methods).toEqual(["payhere", "payments_lk", "paypal"]);
+  });
+
+  it("still prefers payhere over payments_lk for local customers by default", () => {
+    const withPaymentsLk = { ...business, paymentsLkEnabled: true };
+    const methods = getAvailablePaymentMethods(withPaymentsLk, true, 5000, true, true, true);
+    expect(resolveDefaultPaymentMethod(methods, "+94771234567")).toBe("payhere");
+  });
+
+  it("falls back to payments_lk for local customers when payhere isn't configured", () => {
+    const onlyPaymentsLk = {
+      ...business,
+      payhereEnabled: false,
+      paymentsLkEnabled: true,
+    };
+    const methods = getAvailablePaymentMethods(onlyPaymentsLk, true, 5000, false, true, true);
+    expect(resolveDefaultPaymentMethod(methods, "+94771234567")).toBe("payments_lk");
+  });
+
+  it("honors an explicit payments_lk request", () => {
+    const withPaymentsLk = { ...business, paymentsLkEnabled: true };
+    const methods = getAvailablePaymentMethods(withPaymentsLk, true, 5000, true, true, true);
+    expect(
+      resolveOnlinePaymentMethod({ methods, requested: "payments_lk", clientPhone: "+94771234567" }),
+    ).toBe("payments_lk");
   });
 });

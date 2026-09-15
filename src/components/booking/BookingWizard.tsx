@@ -99,6 +99,7 @@ export type BookingBusiness = {
   name: string;
   payhereEnabled?: boolean;
   paypalEnabled?: boolean;
+  paymentsLkEnabled?: boolean;
   slug: string;
   logoUrl?: string | null;
   hideBranding?: boolean;
@@ -329,11 +330,19 @@ function BookingWizardInner({
       payhereFormData?: Record<string, string>;
       payhereUrl?: string;
       approvalUrl?: string;
+      checkoutUrl?: string;
       provider?: string;
       status?: string;
     }) => {
       void slotHold.releaseHold();
-      if (data.payhereUrl || data.approvalUrl || data.provider === "paypal" || data.provider === "payhere") {
+      if (
+        data.payhereUrl ||
+        data.approvalUrl ||
+        data.checkoutUrl ||
+        data.provider === "paypal" ||
+        data.provider === "payhere" ||
+        data.provider === "payments_lk"
+      ) {
         router.push(`/book/${business.slug}/pay?bookingId=${data.bookingId}`);
         return;
       }

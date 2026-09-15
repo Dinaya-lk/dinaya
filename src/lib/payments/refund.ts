@@ -64,6 +64,8 @@ export function refundInstructions(provider: string | null | undefined): string 
       return "Send the money back by bank transfer or LankaQR, then record it here.";
     case "payhere":
       return "Issue the refund in your PayHere merchant dashboard, then record it here. PayHere usually takes 5–7 working days.";
+    case "payments_lk":
+      return "Issue the refund in your Payments.lk dashboard, then record it here. A test-mode refund settles at once; a live refund goes out the next bank working day.";
     default:
       return "Issue the refund through the original payment method, then record it here.";
   }

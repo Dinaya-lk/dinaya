@@ -20,6 +20,9 @@ export type BusinessPaymentSettings = {
   paypalEnabled: boolean;
   paypalClientId: string | null;
   paypalClientSecret: string | null;
+  paymentsLkEnabled: boolean;
+  paymentsLkSecretKey: string | null;
+  paymentsLkWebhookSecret: string | null;
 };
 
 const basePaymentColumns = {
@@ -42,32 +45,47 @@ export async function getBusinessPaymentSettings(
   businessId: string,
 ): Promise<BusinessPaymentSettings | null> {
   const includePaypal = await hasPublicColumn("businesses", "paypal_enabled");
+  const includePaymentsLk = await hasPublicColumn("businesses", "payments_lk_enabled");
 
   const [row] = await db
-    .select(
-      includePaypal
+    .select({
+      ...basePaymentColumns,
+      ...(includePaypal
         ? {
-            ...basePaymentColumns,
             paypalEnabled: businesses.paypalEnabled,
             paypalClientId: businesses.paypalClientId,
             paypalClientSecret: businesses.paypalClientSecret,
           }
-        : basePaymentColumns,
-    )
+        : {}),
+      ...(includePaymentsLk
+        ? {
+            paymentsLkEnabled: businesses.paymentsLkEnabled,
+            paymentsLkSecretKey: businesses.paymentsLkSecretKey,
+            paymentsLkWebhookSecret: businesses.paymentsLkWebhookSecret,
+          }
+        : {}),
+    })
     .from(businesses)
     .where(eq(businesses.id, businessId))
     .limit(1);
 
   if (!row) return null;
 
-  if (includePaypal) {
-    return row as BusinessPaymentSettings;
-  }
-
   return {
     ...row,
-    paypalEnabled: false,
-    paypalClientId: null,
-    paypalClientSecret: null,
+    paypalEnabled: includePaypal ? Boolean((row as { paypalEnabled?: boolean }).paypalEnabled) : false,
+    paypalClientId: includePaypal ? ((row as { paypalClientId?: string | null }).paypalClientId ?? null) : null,
+    paypalClientSecret: includePaypal
+      ? ((row as { paypalClientSecret?: string | null }).paypalClientSecret ?? null)
+      : null,
+    paymentsLkEnabled: includePaymentsLk
+      ? Boolean((row as { paymentsLkEnabled?: boolean }).paymentsLkEnabled)
+      : false,
+    paymentsLkSecretKey: includePaymentsLk
+      ? ((row as { paymentsLkSecretKey?: string | null }).paymentsLkSecretKey ?? null)
+      : null,
+    paymentsLkWebhookSecret: includePaymentsLk
+      ? ((row as { paymentsLkWebhookSecret?: string | null }).paymentsLkWebhookSecret ?? null)
+      : null,
   };
 }
