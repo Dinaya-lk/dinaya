@@ -50,15 +50,12 @@ export default async function AdminAccountsPage({
       phone: businesses.phone,
       plan: businesses.plan,
       createdAt: businesses.createdAt,
-      bookingCount: sql<number>`coalesce(count(distinct ${bookings.id}), 0)::int`,
-      userCount: sql<number>`coalesce(count(distinct ${users.id}), 0)::int`,
-      subStatus: sql<string | null>`max(${subscriptions.status}::text)`,
-      mrr: sql<number>`coalesce(sum(case when ${subscriptions.status} = 'active' then ${subscriptions.amountLkr} else 0 end), 0)::int`,
+      bookingCount: sql<number>`(select count(*)::int from ${bookings} where ${bookings.businessId} = ${businesses.id})`,
+      userCount: sql<number>`(select count(*)::int from ${users} where ${users.businessId} = ${businesses.id})`,
+      subStatus: sql<string | null>`(select max(${subscriptions.status}::text) from ${subscriptions} where ${subscriptions.businessId} = ${businesses.id})`,
+      mrr: sql<number>`(select coalesce(sum(${subscriptions.amountLkr}), 0)::int from ${subscriptions} where ${subscriptions.businessId} = ${businesses.id} and ${subscriptions.status} = 'active')`,
     })
     .from(businesses)
-    .leftJoin(bookings, eq(bookings.businessId, businesses.id))
-    .leftJoin(users, eq(users.businessId, businesses.id))
-    .leftJoin(subscriptions, eq(subscriptions.businessId, businesses.id))
     .where(whereExpr)
     .groupBy(businesses.id)
     .orderBy(desc(businesses.createdAt))
