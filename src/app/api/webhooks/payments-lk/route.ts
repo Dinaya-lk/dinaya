@@ -242,8 +242,24 @@ export async function POST(req: NextRequest) {
           businessId: booking.businessId,
           entity: "booking",
           entityId: booking.id,
-          meta: { reference, amountCents: event.data.amountCents, bookingStatus: booking.status },
+          meta: {
+            reference,
+            amountCents: event.data.amountCents,
+            bookingStatus: booking.status,
+            needsManualRefund: true,
+            clientName: booking.clientName,
+            clientPhone: booking.clientPhone,
+          },
         });
+
+        // Flag for manual refund so support tooling surfaces this without
+        // relying on anyone reading the activity feed.
+        await db
+          .update(payments)
+          .set({
+            refundReason: `Paid ${((event.data.amountCents ?? 0) / 100).toFixed(2)} LKR but the slot was unavailable (reference ${reference}) — manual refund needed.`,
+          })
+          .where(eq(payments.id, payment.id));
 
         return NextResponse.json({ received: true, orphaned: true });
       }
@@ -373,6 +389,8 @@ export async function POST(req: NextRequest) {
           .set({
             status: "cancelled",
             cancelledAt: new Date(),
+            // Keep this exact string: the late-payment recovery path and the
+            // expiry worker match on it to recognize auto-cancels.
             cancellationReason: "Payment not completed in time.",
           })
           .where(and(eq(bookings.id, booking.id), eq(bookings.status, "pending")))
@@ -383,7 +401,35 @@ export async function POST(req: NextRequest) {
       void releaseDealSlotForBooking(booking.id, "pending").catch((error) => {
         console.error("Deal slot release failed:", error);
       });
+      await logActivity({
+        action: event.type === "checkout.expired" ? "payment_cancelled" : "payment_failed",
+        businessId: booking.businessId,
+        entity: "booking",
+        entityId: booking.id,
+        meta: { reference, amountCents: event.data.amountCents, eventType: event.type },
+      });
     }
+  } else if (payment.status === "success") {
+    // Post-success failure/expiry (e.g. a reversal after capture): money
+    // moved, so this must never be silent. Flag for manual review/refund.
+    await db
+      .update(payments)
+      .set({
+        refundReason: `Payments.lk reported ${event.type} after a successful payment for reference ${reference} — verify in the Payments.lk dashboard and refund if valid.`,
+      })
+      .where(eq(payments.id, payment.id));
+    await logActivity({
+      action: "payment_flagged",
+      businessId: booking.businessId,
+      entity: "booking",
+      entityId: booking.id,
+      meta: {
+        reference,
+        amountCents: event.data.amountCents,
+        eventType: event.type,
+        needsManualRefund: true,
+      },
+    });
   }
 
   return NextResponse.json({ received: true });
