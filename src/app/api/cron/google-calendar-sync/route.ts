@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { syncGoogleCalendarBookings } from "@/lib/google-calendar-sync";
+import { getCronSecret } from "@/lib/env";
 
 export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
   }

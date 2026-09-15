@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processDueAutomationRuns } from "@/lib/automations/engine";
+import { getCronSecret } from "@/lib/env";
 
 export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     return NextResponse.json({ error: "Cron secret not configured" }, { status: 500 });
   }

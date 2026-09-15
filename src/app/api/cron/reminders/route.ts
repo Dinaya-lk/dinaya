@@ -6,11 +6,12 @@ import { addHours } from "date-fns";
 import { canUseFeature, type Plan } from "@/lib/plan";
 import { sendBookingReminderMessage } from "@/lib/messaging/booking-messages";
 import { buildClientBookingUrl } from "@/lib/client-tokens";
+import { getCronSecret } from "@/lib/env";
 import { parseLocationAiConfig } from "@/lib/locations";
 import type { BookingLanguage } from "@/lib/i18n";
 
 export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     return NextResponse.json({ error: "Cron secret not configured" }, { status: 500 });
   }
