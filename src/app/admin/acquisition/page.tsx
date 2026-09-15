@@ -160,8 +160,8 @@ export default async function AdminAcquisitionPage({
       <div className="rounded-xl border bg-white dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex items-center justify-between border-b px-4 py-3 dark:border-neutral-800">
           <h2 className="text-sm font-semibold">Stuck in setup (&gt;3 days)</h2>
-          <Link href="/admin/referrals" className="text-xs font-medium text-primary hover:underline">
-            Referral detail →
+          <Link href="/admin/accounts?plan=trial" className="text-xs font-medium text-primary hover:underline">
+            View trial accounts →
           </Link>
         </div>
         {stuck.length === 0 ? (

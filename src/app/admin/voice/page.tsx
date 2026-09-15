@@ -84,20 +84,6 @@ export default async function AdminVoicePage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-5">
-        <h2 className="text-sm font-semibold text-primary">Phase 2: Dinaya-hosted Twilio voice</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Set <code className="rounded bg-white px-1 dark:bg-neutral-800 text-xs">TWILIO_CONVERSATION_RELAY_WS_URL</code> to
-          enable ConversationRelay for inbound calls. Point a Twilio number voice webhook to:
-        </p>
-        <p className="mt-2 rounded-md border bg-white dark:border-neutral-800 dark:bg-neutral-900 px-3 py-2 font-mono text-xs">
-          POST /api/v1/voice/twilio?businessId=&lt;business-uuid&gt;
-        </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          This is paused for tenant users until rollout. After launch, bookings will flow through <code className="rounded bg-white px-1 dark:bg-neutral-800">/api/v1/bookings</code> with source <code className="rounded bg-white px-1 dark:bg-neutral-800">voice_agent</code>.
-        </p>
-      </div>
-
       {rows.length === 0 ? (
         <div className="rounded-xl border border-dashed border-neutral-200 bg-white p-8 text-center dark:border-neutral-700 dark:bg-neutral-900">
           <p className="font-medium">No voice setup requests yet.</p>

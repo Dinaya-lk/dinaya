@@ -87,6 +87,7 @@ export default async function AdminUsersPage({
           />
         </div>
         <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-1">
+          <input type="hidden" name="q" value={q} />
           {roleChips.map((chip) => {
             const active = (sp.role ?? "all") === chip.value;
             return (

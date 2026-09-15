@@ -106,6 +106,7 @@ export default async function AdminAccountsPage({
           />
         </div>
         <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-1">
+          <input type="hidden" name="q" value={q} />
           {planChips.map((chip) => {
             const active = (sp.plan ?? "all") === chip.value;
             return (
