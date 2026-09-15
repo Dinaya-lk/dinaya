@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 
 const dbSelectMock = vi.hoisted(() => vi.fn());
 const isVoiceReceptionistRolloutOpenMock = vi.hoisted(() => vi.fn());
+const canUseFeatureMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/db", () => ({
   db: {
@@ -16,6 +17,11 @@ vi.mock("@/lib/voice-receptionist", () => ({
     shortMessage: "Coming soon.",
   },
   isVoiceReceptionistRolloutOpen: isVoiceReceptionistRolloutOpenMock,
+}));
+
+vi.mock("@/lib/plan", () => ({
+  canUseFeature: canUseFeatureMock,
+  resolveEffectivePlan: (input: { storedPlan: string }) => input.storedPlan,
 }));
 
 import { GET, POST } from "./route";
@@ -60,6 +66,7 @@ describe("Twilio voice webhook", () => {
     process.env.TWILIO_AUTH_TOKEN = "test-token";
     delete process.env.TWILIO_CONVERSATION_RELAY_WS_URL;
     isVoiceReceptionistRolloutOpenMock.mockReturnValue(true);
+    canUseFeatureMock.mockReturnValue(true);
   });
 
   it("rejects requests with an invalid Twilio signature", async () => {
@@ -78,7 +85,7 @@ describe("Twilio voice webhook", () => {
 
   it("returns TwiML for a valid signed request", async () => {
     dbSelectMock
-      .mockReturnValueOnce(makeLimitQuery([{ id: "00000000-0000-4000-8000-000000000001", name: "Salon" }]))
+      .mockReturnValueOnce(makeLimitQuery([{ id: "00000000-0000-4000-8000-000000000001", name: "Salon", plan: "max", planExpiresAt: null }]))
       .mockReturnValueOnce(
         makeLimitQuery([{ fallbackMessage: "Please book online.", welcomeMessage: "Hello!" }]),
       );
@@ -94,6 +101,24 @@ describe("Twilio voice webhook", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/xml");
     expect(body).toContain("Please book online.");
+  });
+
+  it("returns generic fallback for businesses without voice entitlement", async () => {
+    canUseFeatureMock.mockReturnValue(false);
+    dbSelectMock
+      .mockReturnValueOnce(makeLimitQuery([{ id: "biz_starter", name: "Salon", plan: "starter", planExpiresAt: null }]));
+
+    const req = makeTwilioRequest(
+      "http://localhost/api/v1/voice/twilio?businessId=biz_starter",
+      { CallSid: "CA123", From: "+94770000000" },
+    );
+
+    const res = await POST(req);
+    const body = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(body).toContain("being configured");
+    expect(body).not.toContain("Hello!");
   });
 
   it("rejects GET requests", async () => {

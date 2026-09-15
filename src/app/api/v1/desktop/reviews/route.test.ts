@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 const requireDesktopReadMock = vi.hoisted(() => vi.fn());
 const withRateLimitMock = vi.hoisted(() => vi.fn());
 const getReviewsDashboardListMock = vi.hoisted(() => vi.fn());
+const requireProMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/app/api/v1/desktop/_shared", () => ({
   requireDesktopRead: requireDesktopReadMock,
@@ -18,12 +19,27 @@ vi.mock("@/lib/dashboard/reviews", () => ({
   isDashboardReviewStatusFilter: (value: string) => ["all", "published", "hidden", "needs_reply", "replied"].includes(value),
 }));
 
+vi.mock("@/lib/plan", () => {
+  class PlanRequiredError extends Error {
+    constructor() {
+      super("Reviews requires the Pro plan.");
+      this.name = "PlanRequiredError";
+    }
+  }
+
+  return {
+    PlanRequiredError,
+    requirePro: requireProMock,
+  };
+});
+
 import { GET } from "./route";
 
 describe("GET /api/v1/desktop/reviews", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     withRateLimitMock.mockResolvedValue({ ok: true });
+    requireProMock.mockResolvedValue(undefined);
     requireDesktopReadMock.mockResolvedValue({
       ok: true,
       context: { businessId: "00000000-0000-4000-8000-000000000001", deviceId: "device_1" },
@@ -92,6 +108,19 @@ describe("GET /api/v1/desktop/reviews", () => {
     expect(body.rows).toHaveLength(1);
     expect(body.summary.averageRating).toBe(4.7);
     expect(body.serverTime).toEqual(expect.any(String));
+  });
+
+  it("returns 402 when the reviews feature is not available", async () => {
+    const { PlanRequiredError } = await import("@/lib/plan");
+    requireProMock.mockRejectedValue(new PlanRequiredError());
+
+    const req = new NextRequest("http://localhost/api/v1/desktop/reviews");
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(402);
+    expect(body.feature).toBe("reviews");
+    expect(getReviewsDashboardListMock).not.toHaveBeenCalled();
   });
 
   it("rejects invalid status filters", async () => {
