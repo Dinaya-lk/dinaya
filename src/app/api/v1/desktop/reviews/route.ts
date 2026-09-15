@@ -5,6 +5,7 @@ import {
   isDashboardReviewStatusFilter,
   type DashboardReviewStatusFilter,
 } from "@/lib/dashboard/reviews";
+import { PlanRequiredError, requirePro } from "@/lib/plan";
 import { withRateLimit } from "@/lib/rate-limit";
 
 const DEFAULT_LIMIT = 80;
@@ -27,6 +28,18 @@ export async function GET(req: NextRequest) {
   const authResult = await requireDesktopRead(req);
   if (!authResult.ok) return authResult.response;
   const { businessId, deviceId } = authResult.context;
+
+  try {
+    await requirePro(businessId, "reviews");
+  } catch (error) {
+    if (error instanceof PlanRequiredError) {
+      return NextResponse.json(
+        { error: error.message, feature: "reviews" },
+        { status: 402 },
+      );
+    }
+    throw error;
+  }
 
   const limited = await withRateLimit(req, {
     scope: "desktop-reviews",
