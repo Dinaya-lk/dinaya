@@ -91,11 +91,15 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     fetch(`/api/dashboard/clients/${id}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Request failed: ${r.status}`);
+        return r.json();
+      })
       .then(({ client, bookings, notes }) => {
+        if (!client?.id) throw new Error("Client not found");
         setClient(client);
-        setBookings(bookings);
-        setNotes(notes);
+        setBookings(bookings ?? []);
+        setNotes(notes ?? []);
         setEditStage(client.stage);
         setEditInternalNotes(client.internalNotes ?? "");
         setLoading(false);
