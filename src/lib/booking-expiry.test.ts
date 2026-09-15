@@ -23,9 +23,10 @@ describe("expireAbandonedPayhereBookings", () => {
 
   it("returns zero when there are no stale bookings", async () => {
     const limit = vi.fn().mockResolvedValue([]);
-    const where = vi.fn(() => ({ limit }));
-    const innerJoinServices = vi.fn(() => ({ where }));
-    const innerJoinPayments = vi.fn(() => ({ innerJoin: innerJoinServices }));
+    const orderBy = vi.fn(() => ({ limit }));
+    const where = vi.fn(() => ({ orderBy }));
+    const leftJoinServices = vi.fn(() => ({ where }));
+    const innerJoinPayments = vi.fn(() => ({ leftJoin: leftJoinServices }));
     const from = vi.fn(() => ({ innerJoin: innerJoinPayments }));
     selectMock.mockReturnValue({ from });
 
@@ -47,9 +48,10 @@ describe("expireAbandonedPayhereBookings", () => {
     };
 
     const limit = vi.fn().mockResolvedValue([staleBooking]);
-    const where = vi.fn(() => ({ limit }));
-    const innerJoinServices = vi.fn(() => ({ where }));
-    const innerJoinPayments = vi.fn(() => ({ innerJoin: innerJoinServices }));
+    const orderBy = vi.fn(() => ({ limit }));
+    const where = vi.fn(() => ({ orderBy }));
+    const leftJoinServices = vi.fn(() => ({ where }));
+    const innerJoinPayments = vi.fn(() => ({ leftJoin: leftJoinServices }));
     const from = vi.fn(() => ({ innerJoin: innerJoinPayments }));
     selectMock.mockReturnValue({ from });
 

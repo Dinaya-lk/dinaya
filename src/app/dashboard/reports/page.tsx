@@ -12,69 +12,6 @@ import { dashboardPageClass } from "@/lib/dashboard-ui";
 import { BarChart3, CalendarDays, Star, Users } from "lucide-react";
 import { Suspense } from "react";
 
-const emptyDealAnalytics = {
-  bestDeal: null,
-  conversionRatePercent: null,
-  dealAttributedRevenueLkr: 0,
-  dealBookingsCount: 0,
-  dealsPostedThisMonth: 0,
-  redemptionsByDiscount: [],
-  totalRedemptions: 0,
-};
-
-function emptyReportsOverview(businessId: string) {
-  const generatedAt = new Date().toISOString();
-  return {
-    breakdowns: {
-      bookingsBySource: [],
-      bookingsByStatus: [],
-      revenueByDay: [],
-      revenueByService: [],
-      staffLoad: [],
-      topClients: [],
-    },
-    business: {
-      id: businessId,
-      name: "Dinaya",
-      timezone: "Asia/Colombo",
-    },
-    export: {
-      csv: "Metric,Value\nRevenue,0\nBookings,0",
-      filename: "dinaya-reports-fallback.csv",
-      generatedAt,
-    },
-    metrics: {
-      averageRating: 0,
-      cancellationRate: 0,
-      cancelledBookings: 0,
-      completedBookings: 0,
-      newClients: 0,
-      noShowRate: 0,
-      noShows: 0,
-      totalBookings: 0,
-      totalClients: 0,
-      totalRevenueLabel: "LKR 0",
-      totalRevenueLkr: 0,
-    },
-    range: {
-      from: generatedAt.slice(0, 10),
-      to: generatedAt.slice(0, 10),
-    },
-    trends: {
-      busiestHours: [],
-      revenueByWeekday: [
-        { day: "Mon", lastWeek: 0, thisWeek: 0 },
-        { day: "Tue", lastWeek: 0, thisWeek: 0 },
-        { day: "Wed", lastWeek: 0, thisWeek: 0 },
-        { day: "Thu", lastWeek: 0, thisWeek: 0 },
-        { day: "Fri", lastWeek: 0, thisWeek: 0 },
-        { day: "Sat", lastWeek: 0, thisWeek: 0 },
-        { day: "Sun", lastWeek: 0, thisWeek: 0 },
-      ],
-    },
-  };
-}
-
 function formatHour(hour: number) {
   const suffix = hour >= 12 ? "pm" : "am";
   const normalized = hour % 12 === 0 ? 12 : hour % 12;
@@ -118,8 +55,8 @@ async function ReportsOverview({
   to?: string;
 }) {
   const [reports, dealAnalytics] = await Promise.all([
-    getReportsDashboardOverview(businessId, { from, to }).catch(() => emptyReportsOverview(businessId)),
-    getDealAnalytics(businessId).catch(() => emptyDealAnalytics),
+    getReportsDashboardOverview(businessId, { from, to }),
+    getDealAnalytics(businessId),
   ]);
 
   const { breakdowns, metrics, trends, export: exportPayload, range } = reports;

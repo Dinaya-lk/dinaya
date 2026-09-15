@@ -5,14 +5,18 @@ import { Search } from "lucide-react";
 import { db } from "@/db";
 import { businesses, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { ADMIN_PAGE_SIZE, adminPageOffset, parseAdminPage } from "@/lib/admin-pagination";
+import { likePattern } from "@/lib/like";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { listPlatformAdminMembers } from "@/lib/platform-admin-members";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
   q?: string;
   role?: "owner" | "staff" | "all";
+  page?: string;
 };
 
 export default async function AdminUsersPage({
@@ -26,9 +30,10 @@ export default async function AdminUsersPage({
   const adminEmailSet = new Set(adminMembers.map((member) => member.email.toLowerCase()));
   const q = (sp.q ?? "").trim();
   const roleFilter = sp.role && sp.role !== "all" ? sp.role : null;
+  const page = parseAdminPage(sp.page);
 
   const searchExpr = q
-    ? or(ilike(users.email, `%${q}%`), ilike(users.name, `%${q}%`))
+    ? or(ilike(users.email, likePattern(q)), ilike(users.name, likePattern(q)))
     : undefined;
   const roleExpr = roleFilter ? eq(users.role, roleFilter) : undefined;
   const whereExpr =
@@ -50,12 +55,17 @@ export default async function AdminUsersPage({
     .innerJoin(businesses, eq(businesses.id, users.businessId))
     .where(whereExpr)
     .orderBy(desc(users.createdAt))
-    .limit(200),
+    .limit(ADMIN_PAGE_SIZE)
+    .offset(adminPageOffset(page)),
     [],
   );
 
   const [{ totalUsers }] = await safeAdminQuery(
-    db.select({ totalUsers: count() }).from(users),
+    db
+      .select({ totalUsers: count() })
+      .from(users)
+      .innerJoin(businesses, eq(businesses.id, users.businessId))
+      .where(whereExpr),
     [{ totalUsers: 0 }] as { totalUsers: number }[],
   );
 
@@ -170,6 +180,16 @@ export default async function AdminUsersPage({
               })}
             </tbody>
           </table>
+        </div>
+        <div className="border-t dark:border-neutral-800">
+          <AdminPagination
+            basePath="/admin/users"
+            params={{ q: q || undefined, role: sp.role }}
+            page={page}
+            rowCount={rows.length}
+            total={Number(totalUsers)}
+            pageSize={ADMIN_PAGE_SIZE}
+          />
         </div>
       </div>
     </div>

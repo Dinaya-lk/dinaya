@@ -24,13 +24,13 @@ export default async function BookingPayReturnPage({ params }: Props) {
   const copy = getBookingCopy(business.language);
 
   return (
-    <div className="flex min-h-dvh items-start justify-center bg-[#f2f2f7] px-4 py-12">
+    <div className="flex min-h-dvh items-start justify-center bg-muted/40 px-4 py-12 dark:bg-neutral-950">
       <div className="w-full max-w-md">
         <Suspense
           fallback={
-            <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-xs">
-              <div className="mx-auto mb-4 size-10 animate-spin rounded-full border-2 border-gray-200 border-t-primary" />
-              <p className="text-sm text-gray-500">{copy.redirectingToPayment}</p>
+            <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-xs dark:bg-neutral-900">
+              <div className="mx-auto mb-4 size-10 animate-spin rounded-full border-2 border-muted border-t-primary" />
+              <p className="text-sm text-muted-foreground">{copy.redirectingToPayment}</p>
             </div>
           }
         >

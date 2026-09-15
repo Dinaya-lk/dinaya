@@ -1,26 +1,30 @@
-import { desc, eq, ilike, or } from "drizzle-orm";
+import { count, desc, eq, ilike, or } from "drizzle-orm";
 import { LifeBuoy, Search } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/db";
 import { businesses, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { ADMIN_PAGE_SIZE, adminPageOffset, parseAdminPage } from "@/lib/admin-pagination";
+import { likePattern } from "@/lib/like";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
 import { RefundPaymentForm } from "./RefundPaymentForm";
 import { SupportClient } from "./SupportClient";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSupportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   await requirePlatformAdmin();
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
+  const page = parseAdminPage(sp.page);
 
   const whereExpr = q
-    ? or(ilike(users.email, `%${q}%`), ilike(users.name, `%${q}%`), ilike(businesses.name, `%${q}%`))
+    ? or(ilike(users.email, likePattern(q)), ilike(users.name, likePattern(q)), ilike(businesses.name, likePattern(q)))
     : undefined;
 
   const rows = await safeAdminQuery(
@@ -36,7 +40,8 @@ export default async function AdminSupportPage({
       .innerJoin(businesses, eq(businesses.id, users.businessId))
       .where(whereExpr)
       .orderBy(desc(users.createdAt))
-      .limit(50),
+      .limit(ADMIN_PAGE_SIZE)
+      .offset(adminPageOffset(page)),
     [] as {
       id: string;
       name: string;
@@ -44,6 +49,15 @@ export default async function AdminSupportPage({
       role: "owner" | "staff";
       businessName: string;
     }[],
+  );
+
+  const [{ filteredTotal }] = await safeAdminQuery(
+    db
+      .select({ filteredTotal: count() })
+      .from(users)
+      .innerJoin(businesses, eq(businesses.id, users.businessId))
+      .where(whereExpr),
+    [{ filteredTotal: 0 }] as { filteredTotal: number }[],
   );
 
   return (
@@ -79,6 +93,14 @@ export default async function AdminSupportPage({
       </form>
 
       <SupportClient users={rows} />
+      <AdminPagination
+        basePath="/admin/support"
+        params={{ q: q || undefined }}
+        page={page}
+        rowCount={rows.length}
+        total={Number(filteredTotal)}
+        pageSize={ADMIN_PAGE_SIZE}
+      />
 
       <RefundPaymentForm />
 

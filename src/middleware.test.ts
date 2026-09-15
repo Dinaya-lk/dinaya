@@ -101,7 +101,7 @@ describe("middleware docs markdown rewrites", () => {
     expect(rewrite).toContain("/book/salon/docs");
   });
 
-  it("redirects signed-in non-admin users away from /admin", async () => {
+  it("lets signed-in non-admin users past middleware (layout enforces platform-admin)", async () => {
     const req = new NextRequest("https://dinaya.lk/admin", {
       headers: {
         host: "dinaya.lk",
@@ -112,6 +112,21 @@ describe("middleware docs markdown rewrites", () => {
         user: {
           email: "owner@example.com",
         },
+      },
+    });
+
+    const res = await middleware(req);
+
+    // Edge middleware only guarantees authentication; src/app/admin/layout.tsx
+    // via requirePlatformAdmin() redirects non-admins so DB-invited admins work.
+    expect(res.headers.get("location")).toBeNull();
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("redirects signed-out users away from /admin", async () => {
+    const req = new NextRequest("https://dinaya.lk/admin", {
+      headers: {
+        host: "dinaya.lk",
       },
     });
 

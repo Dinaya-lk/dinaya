@@ -150,9 +150,12 @@ export function useSlotHold(input: {
 
   useEffect(() => {
     if (hold && secondsRemaining === 0) {
-      setSlotUnavailable(true);
+      // Hold expired: release server-side so the slot frees up, clear local
+      // state so the user can pick again instead of deadlocking on
+      // "pick another time" while still holding.
+      void releaseHold();
     }
-  }, [hold, secondsRemaining]);
+  }, [hold, secondsRemaining, releaseHold]);
 
   const holdLabel =
     hold && secondsRemaining > 0

@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { authConfig } from "@/auth.config";
 import { lookupCustomDomainSlug } from "@/lib/custom-domain";
-import { isAllowlistedPlatformAdminEmail } from "@/lib/developer-access-emails";
 import {
   getDocsMarkdownPathForPage,
   getInternalDocsMarkdownPath,
@@ -29,10 +28,6 @@ function wantsMarkdownResponse(req: NextRequest): boolean {
   if (req.method !== "GET" && req.method !== "HEAD") return false;
   const acceptHeader = req.headers.get("accept")?.toLowerCase() ?? "";
   return acceptHeader.includes("text/markdown");
-}
-
-function isEnvPlatformAdmin(email?: string | null): boolean {
-  return isAllowlistedPlatformAdminEmail(email);
 }
 
 export default auth(async (req) => {
@@ -93,12 +88,10 @@ export default auth(async (req) => {
       signInUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(signInUrl);
     }
-
-    if (!isEnvPlatformAdmin(req.auth.user?.email)) {
-      const signInUrl = redirectOnSameOrigin(req, "/auth/signin");
-      signInUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(signInUrl);
-    }
+    // Platform-admin membership (env allowlist + DB members) is enforced in
+    // src/app/admin/layout.tsx via requirePlatformAdmin(), which can query the
+    // DB. The edge middleware only guarantees authentication here so DB-invited
+    // admins are not locked out.
   }
 
   return NextResponse.next();

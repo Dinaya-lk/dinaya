@@ -85,30 +85,30 @@ export default function PaymentRedirect({ slug, copy }: Props) {
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-red-100 bg-white p-8 text-center shadow-xs">
-        <Icon name="exclamation-circle" className="mb-3 text-2xl text-red-400" />
-        <p className="text-sm text-gray-600">{error}</p>
+      <div className="rounded-2xl border border-destructive/20 bg-card p-8 text-center shadow-xs dark:bg-neutral-900">
+        <Icon name="exclamation-circle" className="mb-3 text-2xl text-destructive" />
+        <p className="text-sm text-muted-foreground">{error}</p>
       </div>
     );
   }
 
   if (!checkout) {
     return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-xs">
-        <div className="mx-auto mb-4 size-10 animate-spin rounded-full border-2 border-gray-200 border-t-primary" />
-        <p className="text-sm text-gray-500">{copy.redirectingToPayment}</p>
+      <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-xs dark:bg-neutral-900">
+        <div className="mx-auto mb-4 size-10 animate-spin rounded-full border-2 border-muted border-t-primary" />
+        <p className="text-sm text-muted-foreground">{copy.redirectingToPayment}</p>
       </div>
     );
   }
 
   if (checkout.provider === "paypal" || checkout.provider === "payments_lk") {
     return (
-      <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-xs">
+      <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-xs dark:bg-neutral-900">
         <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
           <Icon name="credit-card" className="text-2xl text-primary" />
         </div>
-        <h1 className="mb-2 font-cal text-xl text-gray-900">{copy.redirectingToPayment}</h1>
-        <p className="mb-6 text-sm text-gray-500">{copy.paymentRedirectHint}</p>
+        <h1 className="mb-2 font-cal text-xl text-foreground">{copy.redirectingToPayment}</h1>
+        <p className="mb-6 text-sm text-muted-foreground">{copy.paymentRedirectHint}</p>
         <a
           href={checkout.approvalUrl}
           className="inline-flex rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary/90"
@@ -120,12 +120,12 @@ export default function PaymentRedirect({ slug, copy }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center shadow-xs">
+    <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-xs dark:bg-neutral-900">
       <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10">
         <Icon name="credit-card" className="text-2xl text-primary" />
       </div>
-      <h1 className="mb-2 font-cal text-xl text-gray-900">{copy.redirectingToPayment}</h1>
-      <p className="mb-6 text-sm text-gray-500">{copy.paymentRedirectHint}</p>
+      <h1 className="mb-2 font-cal text-xl text-foreground">{copy.redirectingToPayment}</h1>
+      <p className="mb-6 text-sm text-muted-foreground">{copy.paymentRedirectHint}</p>
       <form ref={formRef} method="POST" action={checkout.payhereUrl}>
         {Object.entries(checkout.payhereFormData).map(([key, value]) => (
           <input key={key} type="hidden" name={key} value={value} />

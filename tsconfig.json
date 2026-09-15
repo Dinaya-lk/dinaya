@@ -47,6 +47,13 @@
     "dinaya-uptime-monitor",
     "e2e",
     "playwright.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    // Unit tests run under Vitest (no type-check); Next build should not
+    // type-check them — mirrors the existing e2e exclusion above.
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    // Local scratchpads and temp repo copies — never part of the build.
+    "scratch/**",
+    ".codex-temp/**"
   ]
 }

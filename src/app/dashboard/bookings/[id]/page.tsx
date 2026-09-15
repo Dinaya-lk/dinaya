@@ -96,11 +96,22 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     fetch(`/api/dashboard/bookings/${id}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Request failed: ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
+        if (data?.error || !data?.id) throw new Error(data?.error ?? "Booking not found");
         setBooking(data);
         setStaffNotes(data.staffNotes ?? "");
         setLoading(false);
+      })
+      .catch(() => {
+        setBooking(null);
+        setLoading(false);
+        toast.danger("Could not load booking", {
+          description: "Check your connection and try again.",
+        });
       });
   }, [id]);
 

@@ -37,7 +37,7 @@ const PERIOD_LABEL: Record<Period, keyof Pick<BookingCopy, "morning" | "afternoo
   evening: "evening",
 };
 
-export type SlotEmptyState = "none" | "closed" | "full" | "capacity";
+export type SlotEmptyState = "none" | "closed" | "full" | "capacity" | "error";
 
 interface Props {
   slots: SlotOption[];
@@ -51,6 +51,7 @@ interface Props {
   busyTimes?: CalendarBusyTime[];
   nextAvailable?: NextAvailableSlot | null;
   onNextAvailable?: (slot: NextAvailableSlot) => void;
+  onRetry?: () => void;
 }
 
 export default function TimeSlotGrid({
@@ -65,6 +66,7 @@ export default function TimeSlotGrid({
   busyTimes = [],
   nextAvailable,
   onNextAvailable,
+  onRetry,
 }: Props) {
   if (loading) {
     return <TimeSlotGridSkeleton label={copy.loadingAvailableTimes} />;
@@ -77,6 +79,7 @@ export default function TimeSlotGrid({
         emptyState={emptyState}
         nextAvailable={nextAvailable}
         onNextAvailable={onNextAvailable}
+        onRetry={onRetry}
         variant="grid"
       />
     );

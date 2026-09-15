@@ -5,15 +5,19 @@ import { ChevronRight, Search } from "lucide-react";
 import { db } from "@/db";
 import { bookings, businesses, subscriptions, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { ADMIN_PAGE_SIZE, adminPageOffset, parseAdminPage } from "@/lib/admin-pagination";
+import { likePattern } from "@/lib/like";
 import { planDisplayName, type Plan } from "@/lib/plan";
 import { formatLkr } from "@/lib/utils";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = {
   q?: string;
   plan?: "trial" | "starter" | "pro" | "max" | "expired" | "all";
+  page?: string;
 };
 
 export default async function AdminAccountsPage({
@@ -25,12 +29,13 @@ export default async function AdminAccountsPage({
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const planFilter = sp.plan && sp.plan !== "all" ? sp.plan : null;
+  const page = parseAdminPage(sp.page);
 
   const searchExpr = q
     ? or(
-        ilike(businesses.name, `%${q}%`),
-        ilike(businesses.slug, `%${q}%`),
-        ilike(businesses.email, `%${q}%`)
+        ilike(businesses.name, likePattern(q)),
+        ilike(businesses.slug, likePattern(q)),
+        ilike(businesses.email, likePattern(q))
       )
     : undefined;
   const planExpr = planFilter ? eq(businesses.plan, planFilter) : undefined;
@@ -49,24 +54,22 @@ export default async function AdminAccountsPage({
       phone: businesses.phone,
       plan: businesses.plan,
       createdAt: businesses.createdAt,
-      bookingCount: sql<number>`coalesce(count(distinct ${bookings.id}), 0)::int`,
-      userCount: sql<number>`coalesce(count(distinct ${users.id}), 0)::int`,
-      subStatus: sql<string | null>`max(${subscriptions.status}::text)`,
-      mrr: sql<number>`coalesce(sum(case when ${subscriptions.status} = 'active' then ${subscriptions.amountLkr} else 0 end), 0)::int`,
+      bookingCount: sql<number>`(select count(*)::int from ${bookings} where ${bookings.businessId} = ${businesses.id})`,
+      userCount: sql<number>`(select count(*)::int from ${users} where ${users.businessId} = ${businesses.id})`,
+      subStatus: sql<string | null>`(select max(${subscriptions.status}::text) from ${subscriptions} where ${subscriptions.businessId} = ${businesses.id})`,
+      mrr: sql<number>`(select coalesce(sum(${subscriptions.amountLkr}), 0)::int from ${subscriptions} where ${subscriptions.businessId} = ${businesses.id} and ${subscriptions.status} = 'active')`,
     })
     .from(businesses)
-    .leftJoin(bookings, eq(bookings.businessId, businesses.id))
-    .leftJoin(users, eq(users.businessId, businesses.id))
-    .leftJoin(subscriptions, eq(subscriptions.businessId, businesses.id))
     .where(whereExpr)
     .groupBy(businesses.id)
     .orderBy(desc(businesses.createdAt))
-    .limit(100),
+    .limit(ADMIN_PAGE_SIZE)
+    .offset(adminPageOffset(page)),
     [],
   );
 
   const [{ totalAccounts }] = await safeAdminQuery(
-    db.select({ totalAccounts: count() }).from(businesses),
+    db.select({ totalAccounts: count() }).from(businesses).where(whereExpr),
     [{ totalAccounts: 0 }] as { totalAccounts: number }[],
   );
 
@@ -85,7 +88,7 @@ export default async function AdminAccountsPage({
         <div>
           <h1 className="font-cal text-3xl tracking-tight">Accounts</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {Number(totalAccounts).toLocaleString()} total · showing {rows.length}
+            {Number(totalAccounts).toLocaleString()} matching · page {page}
           </p>
         </div>
       </div>
@@ -226,6 +229,16 @@ export default async function AdminAccountsPage({
               })}
             </tbody>
           </table>
+        </div>
+        <div className="border-t dark:border-neutral-800">
+          <AdminPagination
+            basePath="/admin/accounts"
+            params={{ q: q || undefined, plan: sp.plan }}
+            page={page}
+            rowCount={rows.length}
+            total={Number(totalAccounts)}
+            pageSize={ADMIN_PAGE_SIZE}
+          />
         </div>
       </div>
     </div>

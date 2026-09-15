@@ -275,8 +275,24 @@ export async function POST(req: NextRequest) {
           businessId: booking.businessId,
           entity: "booking",
           entityId: booking.id,
-          meta: { orderId, amount: payhereAmount, bookingStatus: booking.status },
+          meta: {
+            orderId,
+            amount: payhereAmount,
+            bookingStatus: booking.status,
+            needsManualRefund: true,
+            clientName: booking.clientName,
+            clientPhone: booking.clientPhone,
+          },
         });
+
+        // Flag for manual refund so support tooling surfaces this without
+        // relying on anyone reading the activity feed.
+        await db
+          .update(payments)
+          .set({
+            refundReason: `Paid ${payhereAmount} LKR but the slot was unavailable (order ${orderId}) — manual refund needed.`,
+          })
+          .where(eq(payments.id, payment.id));
 
         return NextResponse.json({ received: true, orphaned: true });
       }
@@ -401,6 +417,8 @@ export async function POST(req: NextRequest) {
           .set({
             status: "cancelled",
             cancelledAt: new Date(),
+            // Keep this exact string: the late-payment recovery path and the
+            // expiry worker match on it to recognize auto-cancels.
             cancellationReason: "Payment not completed in time.",
           })
           .where(and(eq(bookings.id, booking.id), eq(bookings.status, "pending")))
@@ -410,6 +428,48 @@ export async function POST(req: NextRequest) {
     if (failedPayment && cancelledBooking) {
       void releaseDealSlotForBooking(booking.id, "pending").catch((error) => {
         console.error("Deal slot release failed:", error);
+      });
+      await logActivity({
+        action:
+          statusCode === "-3"
+            ? "payment_chargeback"
+            : statusCode === "-2"
+              ? "payment_failed"
+              : "payment_cancelled",
+        businessId: booking.businessId,
+        entity: "booking",
+        entityId: booking.id,
+        meta: {
+          orderId,
+          amount: payhereAmount,
+          currency: payhereCurrency,
+          payhereStatusCode: statusCode,
+        },
+      });
+    } else if (payment.status === "success") {
+      // Post-success -1/-2/-3 (e.g. a chargeback after capture): money moved,
+      // so this must never be silent. Flag for manual review/refund.
+      const disputed = statusCode === "-3";
+      await db
+        .update(payments)
+        .set({
+          refundReason: disputed
+            ? `PayHere chargeback reported for order ${orderId} — verify in the PayHere dashboard and refund if valid.`
+            : `PayHere reported status ${statusCode} after a successful payment for order ${orderId} — manual review needed.`,
+        })
+        .where(eq(payments.id, payment.id));
+      await logActivity({
+        action: disputed ? "payment_disputed" : "payment_flagged",
+        businessId: booking.businessId,
+        entity: "booking",
+        entityId: booking.id,
+        meta: {
+          orderId,
+          amount: payhereAmount,
+          currency: payhereCurrency,
+          payhereStatusCode: statusCode,
+          needsManualRefund: disputed,
+        },
       });
     }
   }

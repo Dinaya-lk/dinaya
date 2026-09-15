@@ -132,7 +132,10 @@ export default function CalendarPage() {
       ? `&staffIds=${encodeURIComponent(selectedStaffId)}`
       : "";
     fetch(`/api/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${staffParam}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`Calendar request failed: ${r.status}`);
+        return r.json();
+      })
       .then((data) => {
         setBookings(data.bookings ?? []);
         if (data.staff?.length) {

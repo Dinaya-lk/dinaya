@@ -83,7 +83,7 @@ All cron workflows use `DINAYA_APP_URL` and `CRON_SECRET`. Schedules are UTC:
 | `automations-cron.yml` | `/api/cron/automations` | every 15 minutes |
 | `webhook-retries-cron.yml` | `/api/cron/webhook-retries` | every 15 minutes |
 | `google-calendar-cron.yml` | `/api/cron/google-calendar-sync` | hourly |
-| `booking-reminders-cron.yml` | `/api/cron/reminders` | daily at 04:30 |
+| `booking-reminders-cron.yml` | `/api/cron/reminders` | hourly at :30 (covers bookings 20–28h out) |
 | `deal-suggestions-cron.yml` | `/api/cron/deal-suggestions` | daily at 03:00 |
 | `deal-holds-cron.yml` | `/api/cron/deal-holds` | every 15 minutes |
 | `expire-pending-bookings-cron.yml` | `/api/cron/expire-pending-bookings` | every 15 minutes |

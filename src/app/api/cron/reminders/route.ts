@@ -6,11 +6,13 @@ import { addHours } from "date-fns";
 import { canUseFeature, type Plan } from "@/lib/plan";
 import { sendBookingReminderMessage } from "@/lib/messaging/booking-messages";
 import { buildClientBookingUrl } from "@/lib/client-tokens";
+import { acquireCronLock } from "@/lib/cron-lock";
+import { getCronSecret } from "@/lib/env";
 import { parseLocationAiConfig } from "@/lib/locations";
 import type { BookingLanguage } from "@/lib/i18n";
 
 export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     return NextResponse.json({ error: "Cron secret not configured" }, { status: 500 });
   }
@@ -18,6 +20,22 @@ export async function GET(req: NextRequest) {
   if (authHeader !== `Bearer ${expected}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Overlap guard: two concurrent ticks would otherwise select the same
+  // reminderSentAt IS NULL rows and double-send. TTL bounds a crashed tick.
+  const lock = await acquireCronLock("reminders", 3000);
+  if (!lock.locked) {
+    return NextResponse.json({ locked: true, skipped: true, sent: 0, checked: 0 });
+  }
+
+  try {
+    return await runReminderTick();
+  } finally {
+    await lock.release();
+  }
+}
+
+async function runReminderTick() {
 
   const now = new Date();
   const windowStart = addHours(now, 20);
@@ -136,7 +154,7 @@ export async function GET(req: NextRequest) {
       await db
         .update(bookings)
         .set({ reminderSentAt: new Date() })
-        .where(eq(bookings.id, booking.id));
+        .where(and(eq(bookings.id, booking.id), isNull(bookings.reminderSentAt)));
       skipped++;
       continue;
     }
@@ -165,7 +183,7 @@ export async function GET(req: NextRequest) {
         await db
           .update(bookings)
           .set({ reminderSentAt: new Date() })
-          .where(eq(bookings.id, booking.id));
+          .where(and(eq(bookings.id, booking.id), isNull(bookings.reminderSentAt)));
         sent++;
       } else {
         skipped++;

@@ -118,10 +118,11 @@ export default function StepDateTime({
     try {
     const res = await fetch(`/api/availability?${query.toString()}`);
     if (!res.ok) {
-      setSlotEmptyState("full");
+      setSlotEmptyState("error");
       setSlots([]);
       setLoadingSlots(false);
       setHasFetched(true);
+      onSlotsChange?.([], false, "error");
       return;
     }
     const data = await res.json();
@@ -139,11 +140,17 @@ export default function StepDateTime({
     setHasFetched(true);
     onSlotsChange?.(fetchedSlots, false, fetchedEmptyState);
     } catch {
-      setSlotEmptyState("full");
+      setSlotEmptyState("error");
       setSlots([]);
       setLoadingSlots(false);
       setHasFetched(true);
+      onSlotsChange?.([], false, "error");
     }
+  }
+
+  function retryLoadSlots() {
+    delete slotCacheRef.current[selectedDate];
+    void loadSlots(selectedDate);
   }
 
   const loadMonthStatus = useCallback(
@@ -301,6 +308,7 @@ export default function StepDateTime({
     busyTimes: calendarOverlay?.busyTimes,
     nextAvailable: showNextAvailable ? nextAvailable : null,
     onNextAvailable: handleNextAvailable,
+    onRetry: retryLoadSlots,
   };
 
   return (

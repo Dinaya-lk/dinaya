@@ -737,7 +737,7 @@ export default function ProductMockup({
                   aria-selected={active}
                   aria-label={p.label}
                   onClick={() => selectPersona(index)}
-                  className={`relative size-9 overflow-hidden rounded-full transition-[transform,box-shadow] duration-150 ease-out active:scale-[0.96] ${
+                  className={`relative size-9 overflow-hidden rounded-full transition-[transform,box-shadow] duration-150 ease-out active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-offset-2 ${
                     active ? "ring-2 ring-offset-2 ring-offset-background" : "opacity-70 hover:opacity-100"
                   }`}
                   style={{

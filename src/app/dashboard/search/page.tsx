@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { bookings, clients, services } from "@/db/schema";
 import { requireBusiness } from "@/lib/auth";
 import { dashboardCardClass, dashboardPageClass } from "@/lib/dashboard-ui";
+import { likePattern } from "@/lib/like";
 import { cn } from "@/lib/utils";
 import { eq, ilike, or, and, desc } from "drizzle-orm";
 
@@ -32,7 +33,7 @@ export default async function DashboardSearchPage({
     );
   }
 
-  const pattern = `%${q}%`;
+  const pattern = likePattern(q);
 
   const [clientRows, bookingRows, serviceRows] = await Promise.all([
     db

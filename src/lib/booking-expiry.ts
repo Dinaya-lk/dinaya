@@ -1,4 +1,4 @@
-import { and, eq, lt } from "drizzle-orm";
+import { and, asc, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { bookings, payments, services } from "@/db/schema";
 import { logActivity } from "@/lib/activity-log";
@@ -26,7 +26,7 @@ export async function expireAbandonedPayhereBookings(): Promise<{
     })
     .from(bookings)
     .innerJoin(payments, eq(payments.bookingId, bookings.id))
-    .innerJoin(services, eq(services.id, bookings.serviceId))
+    .leftJoin(services, eq(services.id, bookings.serviceId))
     .where(
       and(
         eq(bookings.status, "pending"),
@@ -34,6 +34,7 @@ export async function expireAbandonedPayhereBookings(): Promise<{
         lt(payments.createdAt, cutoff),
       ),
     )
+    .orderBy(asc(payments.createdAt))
     .limit(200);
 
   let expired = 0;
@@ -80,7 +81,7 @@ export async function expireAbandonedPayhereBookings(): Promise<{
       status: "cancelled",
       clientName: row.clientName,
       clientPhone: row.clientPhone,
-      serviceName: row.serviceName,
+      serviceName: row.serviceName ?? "Deleted service",
       startsAt: row.startsAt.toISOString(),
       reason: "payment_expired",
     });

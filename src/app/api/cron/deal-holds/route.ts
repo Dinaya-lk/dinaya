@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { releaseStaleDealHolds } from "@/lib/deals/holds";
+import { acquireCronLock } from "@/lib/cron-lock";
+import { getCronSecret } from "@/lib/env";
 
 export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
+  const expected = getCronSecret();
   if (!expected) {
     return NextResponse.json({ error: "Cron secret not configured" }, { status: 500 });
   }
@@ -12,6 +14,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const lock = await acquireCronLock("deal-holds");
+  if (!lock.locked) {
+    return NextResponse.json({ locked: true, skipped: true });
+  }
+
   try {
     const result = await releaseStaleDealHolds();
     return NextResponse.json(result);
@@ -19,5 +26,7 @@ export async function GET(req: NextRequest) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[cron/deal-holds] unhandled error:", message, err);
     return NextResponse.json({ error: message }, { status: 500 });
+  } finally {
+    await lock.release();
   }
 }

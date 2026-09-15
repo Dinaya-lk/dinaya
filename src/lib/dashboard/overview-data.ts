@@ -226,8 +226,8 @@ export async function getDashboardOverviewData(businessId: string): Promise<Dash
         status: bookings.status,
       })
       .from(bookings)
-      .innerJoin(services, eq(services.id, bookings.serviceId))
-      .innerJoin(staff, eq(staff.id, bookings.staffId))
+      .leftJoin(services, eq(services.id, bookings.serviceId))
+      .leftJoin(staff, eq(staff.id, bookings.staffId))
       .where(and(eq(bookings.businessId, businessId), gte(bookings.startsAt, todayStart), lt(bookings.startsAt, tomorrow)))
       .orderBy(bookings.startsAt)
       .limit(10),
@@ -239,7 +239,7 @@ export async function getDashboardOverviewData(businessId: string): Promise<Dash
         startsAt: bookings.startsAt,
       })
       .from(bookings)
-      .innerJoin(services, eq(services.id, bookings.serviceId))
+      .leftJoin(services, eq(services.id, bookings.serviceId))
       .where(and(eq(bookings.businessId, businessId), gte(bookings.startsAt, now)))
       .orderBy(bookings.startsAt)
       .limit(3),
@@ -358,8 +358,15 @@ export async function getDashboardOverviewData(businessId: string): Promise<Dash
     bookingDisplayUrl,
     whatsappShare,
     embedSnippet,
-    todayRows,
-    nextRows,
+    todayRows: todayRows.map((row) => ({
+      ...row,
+      serviceName: row.serviceName ?? "Deleted service",
+      staffName: (row as { staffName?: string | null }).staffName ?? "—",
+    })),
+    nextRows: nextRows.map((row) => ({
+      ...row,
+      serviceName: row.serviceName ?? "Deleted service",
+    })),
     recentActivity,
   };
 }

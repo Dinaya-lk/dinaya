@@ -1,26 +1,30 @@
 import Link from "next/link";
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { format } from "date-fns";
 import { Search } from "lucide-react";
 import { db } from "@/db";
 import { activityLog, businesses, users } from "@/db/schema";
 import { safeAdminQuery } from "@/lib/admin-db";
+import { ADMIN_PAGE_SIZE, adminPageOffset, parseAdminPage } from "@/lib/admin-pagination";
+import { likePattern } from "@/lib/like";
 import { requirePlatformAdmin } from "@/lib/platform-admin";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; entity?: string }>;
+  searchParams: Promise<{ q?: string; entity?: string; page?: string }>;
 }) {
   await requirePlatformAdmin();
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
   const entity = (sp.entity ?? "").trim();
+  const page = parseAdminPage(sp.page);
 
   const searchExpr = q
-    ? or(ilike(activityLog.action, `%${q}%`), ilike(businesses.name, `%${q}%`))
+    ? or(ilike(activityLog.action, likePattern(q)), ilike(businesses.name, likePattern(q)))
     : undefined;
   const entityExpr = entity ? eq(activityLog.entity, entity) : undefined;
   const whereExpr =
@@ -44,17 +48,27 @@ export default async function AdminActivityPage({
     .leftJoin(users, eq(users.id, activityLog.actorUserId))
     .where(whereExpr)
     .orderBy(desc(activityLog.createdAt))
-    .limit(150),
+    .limit(ADMIN_PAGE_SIZE)
+    .offset(adminPageOffset(page)),
     [],
+  );
+
+  const [{ filteredTotal }] = await safeAdminQuery(
+    db
+      .select({ filteredTotal: count() })
+      .from(activityLog)
+      .innerJoin(businesses, eq(businesses.id, activityLog.businessId))
+      .where(whereExpr),
+    [{ filteredTotal: 0 }] as { filteredTotal: number }[],
   );
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-cal text-3xl tracking-tight">Activity log</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Recent events across every tenant. Showing latest {rows.length}.
-        </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Recent events across every tenant. {Number(filteredTotal).toLocaleString()} matching.
+          </p>
       </div>
 
       <form method="get" className="flex flex-wrap items-center gap-3 rounded-xl border bg-white dark:border-neutral-800 dark:bg-neutral-900 p-3">
@@ -132,6 +146,16 @@ export default async function AdminActivityPage({
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="border-t dark:border-neutral-800">
+          <AdminPagination
+            basePath="/admin/activity"
+            params={{ q: q || undefined, entity: entity || undefined }}
+            page={page}
+            rowCount={rows.length}
+            total={Number(filteredTotal)}
+            pageSize={ADMIN_PAGE_SIZE}
+          />
         </div>
       </div>
     </div>

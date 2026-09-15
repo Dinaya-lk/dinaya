@@ -7,6 +7,7 @@ import {
   VOICE_RECEPTIONIST_ROLLOUT,
   isVoiceReceptionistRolloutOpen,
 } from "@/lib/voice-receptionist";
+import { canUseFeature, resolveEffectivePlan } from "@/lib/plan";
 
 /**
  * Twilio inbound voice webhook (Phase 2 foundation).
@@ -31,13 +32,28 @@ export async function POST(req: NextRequest) {
   }
 
   const [business] = await db
-    .select({ id: businesses.id, name: businesses.name })
+    .select({
+      id: businesses.id,
+      name: businesses.name,
+      plan: businesses.plan,
+      planExpiresAt: businesses.planExpiresAt,
+    })
     .from(businesses)
     .where(eq(businesses.id, businessId))
     .limit(1);
 
   if (!business) {
     return twimlResponse("<Response><Say language=\"en-IN\">Business not found.</Say></Response>", 404);
+  }
+
+  // Plan gate: without aiVoiceReceptionist entitlement, do not disclose the
+  // tenant's custom welcome message — return the generic fallback instead.
+  const effectivePlan = resolveEffectivePlan({
+    storedPlan: business.plan,
+    planExpiresAt: business.planExpiresAt,
+  });
+  if (!canUseFeature(effectivePlan, "aiVoiceReceptionist")) {
+    return twimlResponse(`<Response><Say language="en-IN">${escapeXml("Our AI receptionist is being configured. Please call back shortly or book online.")}</Say></Response>`);
   }
 
   const [integration] = await db
