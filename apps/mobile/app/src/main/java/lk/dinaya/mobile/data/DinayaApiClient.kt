@@ -261,6 +261,11 @@ class DinayaApiClient(
         ).toLocationDetail()
     }
 
+    suspend fun seedFounderDemo(deviceKey: String): JSONObject =
+        withContext(Dispatchers.IO) {
+            request("POST", mobilePath("demo/seed"), deviceKey, JSONObject())
+        }
+
     suspend fun logout(deviceKey: String) = withContext(Dispatchers.IO) {
         request("POST", mobilePath("auth/logout"), deviceKey = deviceKey, body = JSONObject())
         Unit

@@ -72,4 +72,9 @@ internal fun friendlyConnectionError(error: Throwable, baseUrl: String): String 
     return "Couldn't reach Dinaya. Check your internet and try again."
 }
 
+internal const val FOUNDER_DEMO_EMAIL = "suvenseoras@gmail.com"
+
+internal fun isFounderDemoEmail(email: String): Boolean =
+    email.trim().equals(FOUNDER_DEMO_EMAIL, ignoreCase = true)
+
 internal fun showDeveloperSignInTools(): Boolean = BuildConfig.DEBUG && isEmulatorDevice()
