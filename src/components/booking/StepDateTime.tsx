@@ -58,7 +58,6 @@ export default function StepDateTime({
   locationId,
   anyStaff,
   timezone = DEFAULT_TZ,
-  holdLabel,
   slotUnavailable,
   onDateChange,
   onSlotSelect,
@@ -389,13 +388,6 @@ export default function StepDateTime({
                 </div>
               ) : (
                 <p className="mb-3 text-xs text-muted-foreground">{copy.selectDate}</p>
-              )}
-
-              {holdLabel && selectedSlot && (
-                <p className="mb-3 rounded-lg booking-bg-accent-muted px-3 py-2 text-xs font-medium booking-text-accent">
-                  <Icon name="clock" className="mr-1.5" />
-                  {holdLabel}
-                </p>
               )}
 
               {slotUnavailable && (

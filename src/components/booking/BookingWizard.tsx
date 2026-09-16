@@ -794,14 +794,6 @@ function BookingWizardInner({
                     />
                   </div>
                 ) : null}
-                {!showContactForm && canPickSlots && !selectedSlot ? (
-                  <div className="border-b border-border px-0 pb-3 pt-3 md:hidden">
-                    <h2 className="font-cal text-xl tracking-tight text-foreground">
-                      {copy.pickDateTime}
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">{copy.chooseDate}</p>
-                  </div>
-                ) : null}
                 <BookingMainStepTransition stepKey={showContactForm ? "confirm" : "dateTime"}>
                 {canPickSlots ? (
                   showContactForm ? (

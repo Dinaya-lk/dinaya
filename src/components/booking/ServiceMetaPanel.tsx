@@ -61,7 +61,6 @@ export function ServiceMetaPanel({
   needsStaffPicker,
   selectedDate,
   timeLabel,
-  holdLabel,
   slotUnavailable,
   selectedDeal,
   copy,
@@ -159,13 +158,6 @@ export function ServiceMetaPanel({
                 onSelect={onSelectLocation}
               />
             </div>
-          ) : null}
-
-          {holdLabel && timeLabel ? (
-            <p className="mt-3 rounded-lg booking-bg-accent-muted px-3 py-2.5 text-xs font-medium booking-text-accent">
-              <Icon name="clock" className="mr-1.5" />
-              {holdLabel}
-            </p>
           ) : null}
 
           {slotUnavailable ? (
@@ -325,15 +317,6 @@ export function ServiceMetaPanel({
                 </div>
               </div>
             ) : null}
-          </div>
-        ) : null}
-
-        {holdLabel && dateLabel && timeLabel ? (
-          <div className="mt-4 rounded-lg booking-bg-accent-muted px-3 py-2">
-            <p className="text-xs font-medium booking-text-accent">
-              <Icon name="clock" className="mr-1.5" />
-              {holdLabel}
-            </p>
           </div>
         ) : null}
 

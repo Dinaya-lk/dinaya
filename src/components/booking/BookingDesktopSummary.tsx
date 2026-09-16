@@ -28,7 +28,6 @@ export default function BookingDesktopSummary({
   anyStaff,
   date,
   timeLabel,
-  holdLabel,
   selectedDeal,
 }: Props) {
   if (!service) {
@@ -102,12 +101,6 @@ export default function BookingDesktopSummary({
             </li>
           )}
         </ul>
-        {holdLabel ? (
-          <p className="mt-3 rounded-lg booking-bg-accent-muted px-3 py-2 text-xs font-medium booking-text-accent">
-            <Icon name="clock" className="mr-1.5" />
-            {holdLabel}
-          </p>
-        ) : null}
         {!dateLabel && (
           <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">{copy.pickDateTime}</p>
         )}

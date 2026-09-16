@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -38,12 +37,6 @@ export function BookingChoiceSummary({
       {text ? (
         <p className="truncate text-base font-medium text-foreground md:text-sm" title={text} aria-live="polite">
           {text}
-        </p>
-      ) : null}
-      {holdLabel ? (
-        <p className="mt-2 rounded-lg booking-bg-accent-muted px-3 py-2 text-xs font-medium booking-text-accent lg:hidden">
-          <Icon name="clock" className="mr-1.5" />
-          {holdLabel}
         </p>
       ) : null}
       {slotUnavailable && slotTaken ? (
