@@ -13,11 +13,11 @@ const map = [
 ];
 
 describe("resolveBookingStaffSelection", () => {
-  it("defaults to any staff when multiple eligible", () => {
+  it("leaves staff unset when multiple eligible so the picker shows", () => {
     const result = resolveBookingStaffSelection(staff, map, "svc1");
     expect(result.eligibleCount).toBe(2);
     expect(result.staff).toBeNull();
-    expect(result.anyStaff).toBe(true);
+    expect(result.anyStaff).toBe(false);
   });
 
   it("picks the only eligible staff member", () => {

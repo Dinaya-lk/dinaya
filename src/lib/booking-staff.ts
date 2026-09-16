@@ -48,7 +48,8 @@ export function pickDefaultStaff(
   return eligible.length === 1 ? eligible[0]! : null;
 }
 
-/** Pick staff + any-staff flag when entering a service (defaults to any when 2+ eligible). */
+/** Pick staff + any-staff flag when entering a service. Auto-picks the sole eligible
+ *  staff member; otherwise leaves the choice unset so the team-member picker shows. */
 export function resolveBookingStaffSelection(
   allStaff: Staff[],
   staffServiceMap: { staffId: string; serviceId: string }[],
@@ -72,7 +73,7 @@ export function resolveBookingStaffSelection(
   );
   return {
     staff,
-    anyStaff: !staff && eligible.length > 1,
+    anyStaff: false,
     eligibleCount: eligible.length,
   };
 }
