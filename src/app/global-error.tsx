@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 const CHUNK_RECOVERY_KEY = "dinaya:chunk-recovery";
 const CHUNK_RECOVERY_WINDOW_MS = 30_000;
@@ -21,6 +22,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("Global error:", error);
+    Sentry.captureException(error);
     const lastRecoveryAt = Number(sessionStorage.getItem(CHUNK_RECOVERY_KEY) ?? 0);
     if (isChunkLoadFailure(error) && Date.now() - lastRecoveryAt >= CHUNK_RECOVERY_WINDOW_MS) {
       sessionStorage.setItem(CHUNK_RECOVERY_KEY, String(Date.now()));
